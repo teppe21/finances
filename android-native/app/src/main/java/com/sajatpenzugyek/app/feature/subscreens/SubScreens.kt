@@ -39,6 +39,7 @@ import com.sajatpenzugyek.app.PenzugyekApp
 import com.sajatpenzugyek.app.R
 import com.sajatpenzugyek.app.core.theme.Blue500
 import com.sajatpenzugyek.app.core.utils.CurrencyFormatter
+import com.sajatpenzugyek.app.core.utils.DateFormatter
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -165,9 +166,9 @@ fun RecurringScreen() {
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
-                            val nextFormatted = rule.nextDate?.format(DateTimeFormatter.ISO_LOCAL_DATE) ?: ""
+                            val nextFormatted = rule.nextDate?.let { DateFormatter.format(it) } ?: ""
                             Text(
-                                text = if (nextFormatted.isNotBlank()) "Havi • Következő: $nextFormatted" else "Havi",
+                                text = if (nextFormatted.isNotBlank()) "Monthly • Next: $nextFormatted" else "Monthly",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -266,7 +267,7 @@ fun RecurringScreen() {
                         }
 
                         Text(
-                            text = "4 490 Ft",
+                            text = "4,490 Ft",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,

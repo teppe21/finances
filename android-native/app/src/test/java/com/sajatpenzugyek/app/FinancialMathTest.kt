@@ -59,8 +59,8 @@ class FinancialMathTest {
         )
 
         val categories = listOf(
-            Category("food", "Élelmiszer"),
-            Category("dining", "Étkezés")
+            Category("food", "Food & Groceries"),
+            Category("dining", "Dining & Restaurants")
         )
 
         val breakdown = useCase.calculateCategoryBreakdown(txs, categories)

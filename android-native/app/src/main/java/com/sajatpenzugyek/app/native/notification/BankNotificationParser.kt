@@ -64,7 +64,7 @@ class RevolutParser : BankNotificationParser {
         } else if (title.isNotBlank() && !title.lowercase().contains("revolut") && !title.lowercase().contains("fizetés") && !title.lowercase().contains("utalás")) {
             TextNormalizer.cleanMerchantName(title)
         } else {
-            if (isTransfer) "Átutalás" else "Revolut Partner"
+            if (isTransfer) "Transfer" else "Revolut Partner"
         }
 
         val date = notification.postedAt.atZone(ZoneId.systemDefault()).toLocalDate()
@@ -128,7 +128,7 @@ class OtpParser : BankNotificationParser {
         } else if (dashMatch != null && !dashMatch.groupValues[1].lowercase().contains("ft")) {
             TextNormalizer.cleanMerchantName(dashMatch.groupValues[1])
         } else {
-            "OTP Tranzakció"
+            "OTP Transaction"
         }
 
         val cardMatch = Regex("kártya:?\\s*\\*?(\\d{4})", RegexOption.IGNORE_CASE).find(full)
@@ -145,9 +145,9 @@ class OtpParser : BankNotificationParser {
             date = date,
             valueDate = notification.postedAt,
             suggestedAccountType = AccountType.BANK,
-            suggestedAccountName = "OTP Folyószámla",
+            suggestedAccountName = "OTP Current Account",
             cardLast4 = cardLast4,
-            confidence = if (merchant != "OTP Tranzakció") 0.95f else 0.85f,
+            confidence = if (merchant != "OTP Transaction") 0.95f else 0.85f,
             rawTextExcerpt = full
         )
     }
@@ -173,7 +173,7 @@ class ErsteParser : BankNotificationParser {
             amountMinor = -kotlin.math.abs(extracted.amountMinor),
             currency = extracted.currency,
             direction = TransactionDirection.EXPENSE,
-            merchant = "Erste Tranzakció",
+            merchant = "Erste Transaction",
             description = full.take(120),
             date = date,
             valueDate = notification.postedAt,
@@ -203,7 +203,7 @@ class MbhParser : BankNotificationParser {
             amountMinor = -kotlin.math.abs(extracted.amountMinor),
             currency = extracted.currency,
             direction = TransactionDirection.EXPENSE,
-            merchant = "MBH Tranzakció",
+            merchant = "MBH Transaction",
             description = full.take(120),
             date = date,
             valueDate = notification.postedAt,
@@ -263,7 +263,7 @@ class GenericBankParser : BankNotificationParser {
             amountMinor = -kotlin.math.abs(extracted.amountMinor),
             currency = extracted.currency,
             direction = TransactionDirection.EXPENSE,
-            merchant = "Banki fizetés",
+            merchant = "Bank Transaction",
             description = full.take(120),
             date = date,
             valueDate = notification.postedAt,

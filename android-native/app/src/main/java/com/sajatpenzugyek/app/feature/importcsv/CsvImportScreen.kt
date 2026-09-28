@@ -102,7 +102,7 @@ fun CsvImportScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Válassz ki egy banki CSV kivonatot a készülékedről (OTP, Erste, Revolut, MBH)",
+                        text = stringResource(R.string.select_csv_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center

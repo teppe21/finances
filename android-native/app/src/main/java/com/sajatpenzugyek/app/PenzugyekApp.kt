@@ -48,6 +48,12 @@ class PenzugyekApp : Application() {
         super.onCreate()
         instance = this
 
+        java.util.Locale.setDefault(java.util.Locale.ENGLISH)
+        val config = resources.configuration
+        config.setLocale(java.util.Locale.ENGLISH)
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(config, resources.displayMetrics)
+
         database = AppDatabase.getInstance(this)
 
         transactionRepository = TransactionRepository(database.transactionDao())

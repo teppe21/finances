@@ -4,11 +4,33 @@ import java.time.Instant
 import java.time.LocalDate
 
 enum class TransactionDirection {
-    INCOME, EXPENSE, TRANSFER, REFUND, ADJUSTMENT, UNKNOWN
+    INCOME, EXPENSE, TRANSFER, REFUND, ADJUSTMENT, UNKNOWN;
+
+    fun getDisplayName(): String {
+        return when (this) {
+            INCOME -> "Income"
+            EXPENSE -> "Expense"
+            TRANSFER -> "Transfer"
+            REFUND -> "Refund"
+            ADJUSTMENT -> "Adjustment"
+            UNKNOWN -> "Unknown"
+        }
+    }
 }
 
 enum class TransactionSource {
-    MANUAL, CSV, NOTIFICATION, RECEIPT, OPEN_BANKING, BACKUP
+    MANUAL, CSV, NOTIFICATION, RECEIPT, OPEN_BANKING, BACKUP;
+
+    fun getDisplayName(): String {
+        return when (this) {
+            MANUAL -> "Manual"
+            CSV -> "CSV Import"
+            NOTIFICATION -> "Bank Push"
+            RECEIPT -> "Receipt OCR"
+            OPEN_BANKING -> "Open Banking"
+            BACKUP -> "Backup Restore"
+        }
+    }
 }
 
 data class Transaction(

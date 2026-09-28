@@ -16,6 +16,7 @@ android {
         versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resourceConfigurations += listOf("en")
         vectorDrawables {
             useSupportLibrary = true
         }

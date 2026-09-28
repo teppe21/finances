@@ -69,7 +69,7 @@ class CsvImportViewModel : ViewModel() {
                 if (rows.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
                         isAnalyzing = false,
-                        errorMessage = "Nem találhatók érvényes tranzakció sorok a CSV-ben."
+                        errorMessage = "No valid transaction rows found in the CSV file."
                     )
                     return@launch
                 }
@@ -104,7 +104,7 @@ class CsvImportViewModel : ViewModel() {
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isAnalyzing = false,
-                    errorMessage = e.message ?: "Hiba a CSV beolvasása során"
+                    errorMessage = e.message ?: "Error reading CSV file"
                 )
             }
         }

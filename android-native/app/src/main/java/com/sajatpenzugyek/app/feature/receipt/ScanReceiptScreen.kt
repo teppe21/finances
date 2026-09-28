@@ -318,7 +318,7 @@ fun ScanReceiptScreen(
                 onDismissRequest = { viewModel.clearScan() },
                 sheetState = sheetState
             ) {
-                var merchant: String by remember { mutableStateOf(scan.merchant ?: "Bolt / Partner") }
+                var merchant: String by remember { mutableStateOf(scan.merchant ?: "Store / Merchant") }
                 val initialAmount = ((scan.totalMinor?.let { abs(it) } ?: 124900L) / 100L).toString()
                 var totalAmountText: String by remember { mutableStateOf(initialAmount) }
 

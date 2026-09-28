@@ -70,8 +70,10 @@ import com.sajatpenzugyek.app.core.theme.CategoryColorProvider
 import com.sajatpenzugyek.app.core.theme.Emerald500
 import com.sajatpenzugyek.app.core.theme.Rose500
 import com.sajatpenzugyek.app.core.utils.CurrencyFormatter
+import com.sajatpenzugyek.app.core.utils.DateFormatter
 import com.sajatpenzugyek.app.domain.model.Transaction
 import com.sajatpenzugyek.app.domain.model.TransactionDirection
+import com.sajatpenzugyek.app.feature.analytics.getLocalizedCategoryName
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -188,8 +190,10 @@ fun TransactionsScreen(
                     }
                 )
 
+                val count = state.filteredTransactions.size
+                val txSuffix = if (count == 1) "transaction" else "transactions"
                 Text(
-                    text = "${state.filteredTransactions.size} tranzakció",
+                    text = "$count $txSuffix",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -428,7 +432,7 @@ fun TransactionCard(
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${transaction.date} • ${transaction.source.name.lowercase()}",
+                        text = "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -485,9 +489,10 @@ fun TransactionDetailContent(
             color = if (transaction.amountMinor > 0) Emerald500 else MaterialTheme.colorScheme.onSurface
         )
 
-        DetailRow(label = stringResource(R.string.date), value = transaction.date.toString())
-        DetailRow(label = stringResource(R.string.category), value = transaction.categoryId ?: "other")
-        DetailRow(label = stringResource(R.string.source), value = transaction.source.name)
+        val context = LocalContext.current
+        DetailRow(label = stringResource(R.string.date), value = DateFormatter.format(transaction.date))
+        DetailRow(label = stringResource(R.string.category), value = getLocalizedCategoryName(transaction.categoryId, transaction.categoryId ?: "other", context))
+        DetailRow(label = stringResource(R.string.source), value = transaction.source.getDisplayName())
         if (!transaction.notes.isNullOrBlank()) {
             DetailRow(label = stringResource(R.string.note), value = transaction.notes)
         }
@@ -609,7 +614,7 @@ fun AddTransactionDialog(
                     val major = amountText.toLongOrNull() ?: 0L
                     val minor = major * 100L
                     val dir = if (isExpense) TransactionDirection.EXPENSE else TransactionDirection.INCOME
-                    val desc = descriptionText.ifBlank { merchantText.ifBlank { "Kézi tétel" } }
+                    val desc = descriptionText.ifBlank { merchantText.ifBlank { "Manual Entry" } }
                     onConfirm(selectedAccountId, if (isExpense) -minor else minor, dir, desc, merchantText.ifBlank { null }, selectedCategoryId, LocalDate.now())
                 },
                 enabled = amountText.isNotBlank()

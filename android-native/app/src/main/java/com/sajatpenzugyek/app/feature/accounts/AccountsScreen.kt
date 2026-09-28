@@ -148,7 +148,7 @@ fun AccountCard(account: Account) {
 
                 Column {
                     Text(
-                        text = account.name,
+                        text = account.getDisplayName(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )

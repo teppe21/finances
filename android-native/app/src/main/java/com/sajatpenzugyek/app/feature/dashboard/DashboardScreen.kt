@@ -58,6 +58,7 @@ import com.sajatpenzugyek.app.core.theme.Rose400
 import com.sajatpenzugyek.app.core.theme.Rose500
 import com.sajatpenzugyek.app.core.theme.Slate800
 import com.sajatpenzugyek.app.core.utils.CurrencyFormatter
+import com.sajatpenzugyek.app.core.utils.DateFormatter
 import com.sajatpenzugyek.app.domain.model.CategoryBreakdown
 import com.sajatpenzugyek.app.domain.model.MonthlyTrend
 import com.sajatpenzugyek.app.domain.model.Transaction
@@ -288,8 +289,9 @@ fun TotalBalanceCard(
                     )
                 }
 
+                val txText = if (transactionCount == 1) "1 transaction" else "$transactionCount transactions"
                 Text(
-                    text = "$transactionCount tétel",
+                    text = txText,
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -390,7 +392,7 @@ fun QuickActionsSection(
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            text = "$pendingCount észlelve",
+                            text = "$pendingCount detected",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFFF59E0B),
                             fontWeight = FontWeight.Bold
@@ -686,7 +688,7 @@ fun TransactionRowItem(
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${transaction.date} • ${transaction.source.name.lowercase()}",
+                        text = "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

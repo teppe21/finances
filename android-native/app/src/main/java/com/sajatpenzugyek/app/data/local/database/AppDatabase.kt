@@ -91,27 +91,27 @@ private suspend fun prepopulateDefaults(db: AppDatabase) {
 
     // 1. Prepopulate default accounts (Bank, Revolut, Cash Wallet)
     val accounts = listOf(
-        AccountEntity("acc_cash", "Készpénz", "Tárca", AccountType.CASH, "HUF", 0L, 0L, true, now, now),
-        AccountEntity("acc_otp", "OTP Folyószámla", "OTP Bank", AccountType.BANK, "HUF", 15000000L, 15000000L, true, now, now),
+        AccountEntity("acc_cash", "Cash Wallet", "Wallet", AccountType.CASH, "HUF", 0L, 0L, true, now, now),
+        AccountEntity("acc_otp", "OTP Current Account", "OTP Bank", AccountType.BANK, "HUF", 15000000L, 15000000L, true, now, now),
         AccountEntity("acc_revolut", "Revolut", "Revolut", AccountType.BANK, "HUF", 5000000L, 5000000L, true, now, now),
-        AccountEntity("acc_savings", "Megtakarítás", "Államkincstár", AccountType.SAVINGS, "HUF", 50000000L, 50000000L, true, now, now)
+        AccountEntity("acc_savings", "Savings", "Treasury", AccountType.SAVINGS, "HUF", 50000000L, 50000000L, true, now, now)
     )
     db.accountDao().insertAll(accounts)
 
     // 2. Prepopulate default categories
     val categories = listOf(
-        CategoryEntity("food", "Élelmiszer", "shopping-cart", "#10B981", false, true, now, now),
-        CategoryEntity("dining", "Étkezés / Étterem", "utensils", "#F59E0B", false, true, now, now),
-        CategoryEntity("transport", "Tankolás / Közlekedés", "car", "#EF4444", false, true, now, now),
-        CategoryEntity("subscriptions", "Előfizetések", "gamepad-2", "#0284C7", false, true, now, now),
-        CategoryEntity("housing", "Rezsi / Szolgáltatás", "home", "#3B82F6", false, true, now, now),
-        CategoryEntity("entertainment", "Szórakozás", "film", "#D97706", false, true, now, now),
-        CategoryEntity("savings", "Megtakarítás", "piggy-bank", "#06B6D4", false, true, now, now),
-        CategoryEntity("income", "Bevétel", "wallet", "#10B981", true, true, now, now),
-        CategoryEntity("health", "Egészség / Patika", "heart-pulse", "#14B8A6", false, true, now, now),
-        CategoryEntity("shopping", "Bevásárlás", "shopping-bag", "#F97316", false, true, now, now),
-        CategoryEntity("transfers", "Átutalások", "arrow-left-right", "#6366F1", false, true, now, now),
-        CategoryEntity("other", "Egyéb / Ismeretlen", "help-circle", "#6B7280", false, true, now, now)
+        CategoryEntity("food", "Food & Groceries", "shopping-cart", "#10B981", false, true, now, now),
+        CategoryEntity("dining", "Dining & Restaurants", "utensils", "#F59E0B", false, true, now, now),
+        CategoryEntity("transport", "Transport & Fuel", "car", "#EF4444", false, true, now, now),
+        CategoryEntity("subscriptions", "Subscriptions", "gamepad-2", "#0284C7", false, true, now, now),
+        CategoryEntity("housing", "Housing & Utilities", "home", "#3B82F6", false, true, now, now),
+        CategoryEntity("entertainment", "Entertainment", "film", "#D97706", false, true, now, now),
+        CategoryEntity("savings", "Savings", "piggy-bank", "#06B6D4", false, true, now, now),
+        CategoryEntity("income", "Income", "wallet", "#10B981", true, true, now, now),
+        CategoryEntity("health", "Health & Pharmacy", "heart-pulse", "#14B8A6", false, true, now, now),
+        CategoryEntity("shopping", "Shopping", "shopping-bag", "#F97316", false, true, now, now),
+        CategoryEntity("transfers", "Transfers", "arrow-left-right", "#6366F1", false, true, now, now),
+        CategoryEntity("other", "Other / Uncategorized", "help-circle", "#6B7280", false, true, now, now)
     )
     db.categoryDao().insertAll(categories)
 

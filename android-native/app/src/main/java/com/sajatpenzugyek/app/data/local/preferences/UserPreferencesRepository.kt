@@ -12,7 +12,7 @@ private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 
 data class UserPreferences(
     val theme: String = "dark",
-    val language: String = "hu",
+    val language: String = "en",
     val currency: String = "HUF",
     val appLockType: String = "off",
     val pinHash: String = "",
@@ -35,7 +35,7 @@ class UserPreferencesRepository(private val context: Context) {
     val preferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
         UserPreferences(
             theme = prefs[Keys.THEME] ?: "dark",
-            language = prefs[Keys.LANGUAGE] ?: "hu",
+            language = prefs[Keys.LANGUAGE] ?: "en",
             currency = prefs[Keys.CURRENCY] ?: "HUF",
             appLockType = prefs[Keys.APP_LOCK_TYPE] ?: "off",
             pinHash = prefs[Keys.PIN_HASH] ?: "",

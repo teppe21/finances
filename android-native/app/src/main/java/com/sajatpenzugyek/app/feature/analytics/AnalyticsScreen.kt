@@ -63,6 +63,7 @@ import com.sajatpenzugyek.app.core.theme.CategoryColorProvider
 import com.sajatpenzugyek.app.core.theme.Emerald500
 import com.sajatpenzugyek.app.core.theme.Rose500
 import com.sajatpenzugyek.app.core.utils.CurrencyFormatter
+import com.sajatpenzugyek.app.core.utils.DateFormatter
 import com.sajatpenzugyek.app.domain.model.CategoryBreakdown
 import com.sajatpenzugyek.app.feature.dashboard.MonthlyTrendsChartCard
 import java.time.LocalDate
@@ -84,7 +85,21 @@ fun getLocalizedCategoryName(categoryId: String?, defaultName: String, context: 
         "shopping" -> context.getString(R.string.cat_shopping)
         "transfers" -> context.getString(R.string.cat_transfers)
         "other" -> context.getString(R.string.cat_other)
-        else -> defaultName
+        else -> when (defaultName) {
+            "Élelmiszer" -> context.getString(R.string.cat_food)
+            "Étkezés / Étterem", "Étkezés" -> context.getString(R.string.cat_dining)
+            "Tankolás / Közlekedés", "Közlekedés" -> context.getString(R.string.cat_transport)
+            "Előfizetések" -> context.getString(R.string.cat_subscriptions)
+            "Rezsi / Szolgáltatás", "Lakhatás" -> context.getString(R.string.cat_housing)
+            "Szórakozás" -> context.getString(R.string.cat_entertainment)
+            "Megtakarítás" -> context.getString(R.string.cat_savings)
+            "Bevétel", "Fizetés" -> context.getString(R.string.cat_income)
+            "Egészség / Patika", "Egészség" -> context.getString(R.string.cat_health)
+            "Bevásárlás" -> context.getString(R.string.cat_shopping)
+            "Átutalások", "Átutalás", "Utalás" -> context.getString(R.string.cat_transfers)
+            "Egyéb / Ismeretlen", "Egyéb", "Ismeretlen" -> context.getString(R.string.cat_other)
+            else -> defaultName
+        }
     }
 }
 
@@ -276,7 +291,7 @@ fun PeriodFilterRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${customStartDate.format(DateTimeFormatter.ISO_LOCAL_DATE)}  –  ${customEndDate.format(DateTimeFormatter.ISO_LOCAL_DATE)}",
+                    text = "${DateFormatter.format(customStartDate)}  –  ${DateFormatter.format(customEndDate)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
@@ -530,8 +545,9 @@ fun SpendingDonutChartCard(
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     )
+                                    val txSuffix = if (item.transactionCount == 1) "transaction" else "transactions"
                                     Text(
-                                        text = "${item.transactionCount} tranzakció • ${"%.1f".format(item.percentage)}%",
+                                        text = "${item.transactionCount} $txSuffix • ${"%.1f".format(item.percentage)}%",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -589,8 +605,9 @@ fun TopMerchantsCard(
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
+                            val txSuffix = if (item.count == 1) "transaction" else "transactions"
                             Text(
-                                text = "${item.count} tranzakció",
+                                text = "${item.count} $txSuffix",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

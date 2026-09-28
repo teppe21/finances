@@ -98,14 +98,9 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
-                            selected = prefs.language == "hu",
-                            onClick = { viewModel.setLanguage("hu") },
-                            label = { Text(stringResource(R.string.lang_hu)) }
-                        )
-                        FilterChip(
-                            selected = prefs.language == "en",
-                            onClick = { viewModel.setLanguage("en") },
-                            label = { Text(stringResource(R.string.lang_en)) }
+                            selected = true,
+                            onClick = { },
+                            label = { Text("English") }
                         )
                     }
                 }

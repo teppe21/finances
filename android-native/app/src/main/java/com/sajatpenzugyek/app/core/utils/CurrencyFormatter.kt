@@ -10,9 +10,9 @@ object CurrencyFormatter {
     fun format(amountMinor: Long, currency: String = "HUF"): String {
         val major = abs(amountMinor) / 100.0
 
-        val symbols = DecimalFormatSymbols(Locale("hu", "HU")).apply {
-            groupingSeparator = ' '
-            decimalSeparator = ','
+        val symbols = DecimalFormatSymbols(Locale.US).apply {
+            groupingSeparator = ','
+            decimalSeparator = '.'
         }
 
         val pattern = if (currency.equals("HUF", ignoreCase = true)) {

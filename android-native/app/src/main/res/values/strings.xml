@@ -110,14 +110,15 @@
     <string name="approve">Approve</string>
     <string name="dismiss">Dismiss</string>
     <string name="test_notification">Simulate Test Notification</string>
-    <string name="test_otp_btn">OTP Test (-4 500 Ft)</string>
-    <string name="test_revolut_btn">Revolut Test (-14 500 Ft)</string>
-    <string name="test_revolut_transfer_btn">Revolut Transfer (-10 000 Ft)</string>
+    <string name="test_otp_btn">OTP Test (-4,500 Ft)</string>
+    <string name="test_revolut_btn">Revolut Test (-14,500 Ft)</string>
+    <string name="test_revolut_transfer_btn">Revolut Transfer (-10,000 Ft)</string>
     <string name="hyperos_hint">On Xiaomi / HyperOS devices: tap above, select Finances in the list, then allow notification access.</string>
 
     <!-- File Import (CSV) -->
     <string name="import_title">Import Statement (CSV)</string>
     <string name="select_csv_file">Select CSV File</string>
+    <string name="select_csv_desc">Select a bank statement CSV from your device (OTP, Erste, Revolut, MBH)</string>
     <string name="selected_file">Selected: %1$s</string>
     <string name="detected_rows">%1$d transactions found</string>
     <string name="new_items">%1$d new items</string>
@@ -167,7 +168,9 @@
     <string name="more_budgets_sub">Spending limits by category</string>
     <string name="more_recurring_sub">Subscriptions and recurring payments</string>
     <string name="more_categories_sub">Category and keyword rule manager</string>
-    <string name="more_settings_sub">Theme, language, currency and security</string>
+    <string name="more_settings_sub">Theme, currency and security</string>
+    <string name="transaction_single">transaction</string>
+    <string name="transaction_multiple">transactions</string>
 
     <!-- Budgets -->
     <string name="budgets">Monthly Budgets</string>
@@ -222,7 +225,6 @@
     <string name="theme_light">Light Mode</string>
     <string name="theme_system">System Default</string>
     <string name="language">Language</string>
-    <string name="lang_hu">Magyar</string>
     <string name="lang_en">English</string>
     <string name="currency">Default Currency</string>
     <string name="security">App Security</string>

@@ -118,7 +118,7 @@ object CsvParser {
             if (cells.size < 2) continue
 
             val rawDate = cells.getOrNull(mapping.dateCol) ?: ""
-            val rawDesc = cells.getOrNull(mapping.descCol) ?: "Tranzakció"
+            val rawDesc = cells.getOrNull(mapping.descCol) ?: "Transaction"
 
             val date = parseDate(rawDate) ?: LocalDate.now()
 
