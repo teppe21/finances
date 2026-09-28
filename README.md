@@ -127,26 +127,9 @@ An Android `NotificationListenerService` captures transaction notifications from
 
 ## 📱 App UI Overview
 
-```text
- ┌───────────────────────────┐      ┌───────────────────────────┐
- │ Finances       2026.09    │      │ Analytics         Period  │
- ├───────────────────────────┤      ├───────────────────────────┤
- │ Total Balance             │      │  [This Month] [3M] [Year] │
- │ 420 500 Ft                │      │                           │
- │                           │      │          ╭─────╮          │
- │ +280 000 Ft   -145 000 Ft │      │        ╭─╯     ╰─╮        │
- │ Income        Expense     │      │        │  145k Ft│        │
- ├───────────────────────────┤      │        ╰─╮     ╭─╯        │
- │ Quick Actions             │      │          ╰─────╯          │
- │ [📷 Scan] [📂 CSV] [🔔 Auto]│     │                           │
- ├───────────────────────────┤      │ Food & Groceries   42.5%  │
- │ Recent Transactions       │      │ Dining Out         18.2%  │
- │ 🛒 SPAR Budapest  -4 500Ft│      │ Transport & Fuel   12.0%  │
- │ 🍔 Wolt Courier   -3 200Ft│      │ Subscriptions       8.4%  │
- ├───────────────────────────┤      ├───────────────────────────┤
- │ [Home] [Tx] [Charts] [More│      │ [Home] [Tx] [Charts] [More│
- └───────────────────────────┘      └───────────────────────────┘
-```
+<img width="1200" height="2670" alt="Screenshot_2026-09-28-22-18-43-068_com sajatpenzugyek app" src="https://github.com/user-attachments/assets/3cc79bb8-c940-4d41-8e9a-7207f1c111e5" />
+<img width="1200" height="2670" alt="Screenshot_2026-09-28-22-18-16-797_com sajatpenzugyek app" src="https://github.com/user-attachments/assets/606a58a3-0908-4a90-ba6d-92f046aae72b" />
+
 
 ---
 
