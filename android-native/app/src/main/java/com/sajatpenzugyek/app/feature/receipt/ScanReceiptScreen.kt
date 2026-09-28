@@ -321,9 +321,10 @@ fun ScanReceiptScreen(
                 var merchant: String by remember { mutableStateOf(scan.merchant ?: "Store / Merchant") }
                 val initialAmount = ((scan.totalMinor?.let { abs(it) } ?: 124900L) / 100L).toString()
                 var totalAmountText: String by remember { mutableStateOf(initialAmount) }
+                var selectedCurrency by remember { mutableStateOf(scan.currency.ifBlank { "HUF" }) }
 
                 val merchantLabel = stringResource(R.string.merchant)
-                val totalLabel = stringResource(R.string.total) + " (Ft)"
+                val totalLabel = "${stringResource(R.string.total)} ($selectedCurrency)"
 
                 Column(
                     modifier = Modifier
@@ -353,6 +354,19 @@ fun ScanReceiptScreen(
                         singleLine = true
                     )
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("HUF", "EUR", "USD", "GBP", "CHF").forEach { curr ->
+                            androidx.compose.material3.FilterChip(
+                                selected = selectedCurrency == curr,
+                                onClick = { selectedCurrency = curr },
+                                label = { Text(curr) }
+                            )
+                        }
+                    }
+
                     val cashText = stringResource(R.string.payment_cash)
                     val cardText = stringResource(R.string.payment_card)
                     val methodLabel = stringResource(R.string.payment_method)
@@ -370,7 +384,14 @@ fun ScanReceiptScreen(
                             val minor = (totalAmountText.toLongOrNull() ?: 0L) * 100L
                             val accId = state.selectedAccountId ?: "acc_cash"
                             val catId = state.selectedCategoryId ?: "food"
-                            viewModel.confirmSave(merchant, minor, scan.date ?: LocalDate.now(), accId, catId) {
+                            viewModel.confirmSave(
+                                merchant = merchant,
+                                amountMinor = minor,
+                                date = scan.date ?: LocalDate.now(),
+                                accountId = accId,
+                                categoryId = catId,
+                                currency = selectedCurrency
+                            ) {
                                 onNavigateBack()
                             }
                         },

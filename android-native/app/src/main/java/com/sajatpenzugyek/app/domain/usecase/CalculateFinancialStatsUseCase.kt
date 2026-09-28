@@ -13,29 +13,54 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
+typealias CurrencyAmountConverter = (amountMinor: Long, currency: String, date: LocalDate) -> Long
+
 class CalculateFinancialStatsUseCase {
 
-    fun calculateIncome(transactions: List<Transaction>): Long {
+    private fun getConvertedAmount(
+        tx: Transaction,
+        converter: CurrencyAmountConverter?
+    ): Long {
+        return if (converter != null) {
+            converter(tx.amountMinor, tx.currency, tx.date)
+        } else {
+            tx.amountMinor
+        }
+    }
+
+    fun calculateIncome(
+        transactions: List<Transaction>,
+        converter: CurrencyAmountConverter? = null
+    ): Long {
         return transactions.filter {
             it.direction == TransactionDirection.INCOME ||
                 (it.direction == TransactionDirection.REFUND && it.amountMinor > 0)
-        }.sumOf { abs(it.amountMinor) }
+        }.sumOf { abs(getConvertedAmount(it, converter)) }
     }
 
-    fun calculateExpenses(transactions: List<Transaction>): Long {
+    fun calculateExpenses(
+        transactions: List<Transaction>,
+        converter: CurrencyAmountConverter? = null
+    ): Long {
         return transactions.filter {
             it.direction == TransactionDirection.EXPENSE
-        }.sumOf { abs(it.amountMinor) }
+        }.sumOf { abs(getConvertedAmount(it, converter)) }
     }
 
-    fun calculateTransfers(transactions: List<Transaction>): Long {
+    fun calculateTransfers(
+        transactions: List<Transaction>,
+        converter: CurrencyAmountConverter? = null
+    ): Long {
         return transactions.filter {
             it.direction == TransactionDirection.TRANSFER
-        }.sumOf { abs(it.amountMinor) }
+        }.sumOf { abs(getConvertedAmount(it, converter)) }
     }
 
-    fun calculateBalance(transactions: List<Transaction>): Long {
-        return calculateIncome(transactions) - calculateExpenses(transactions)
+    fun calculateBalance(
+        transactions: List<Transaction>,
+        converter: CurrencyAmountConverter? = null
+    ): Long {
+        return calculateIncome(transactions, converter) - calculateExpenses(transactions, converter)
     }
 
     fun calculateSavingsRate(incomeMinor: Long, expenseMinor: Long): Float {
@@ -45,11 +70,14 @@ class CalculateFinancialStatsUseCase {
         return max(-1.0f, min(1.0f, rate))
     }
 
-    fun execute(transactions: List<Transaction>): FinancialStats {
-        val incomeMinor = calculateIncome(transactions)
-        val expenseMinor = calculateExpenses(transactions)
+    fun execute(
+        transactions: List<Transaction>,
+        converter: CurrencyAmountConverter? = null
+    ): FinancialStats {
+        val incomeMinor = calculateIncome(transactions, converter)
+        val expenseMinor = calculateExpenses(transactions, converter)
         val balanceMinor = incomeMinor - expenseMinor
-        val transfersMinor = calculateTransfers(transactions)
+        val transfersMinor = calculateTransfers(transactions, converter)
         val savingsRate = calculateSavingsRate(incomeMinor, expenseMinor)
 
         var maxExpense = MaxExpenseItem()
@@ -57,7 +85,7 @@ class CalculateFinancialStatsUseCase {
 
         transactions.forEach { t ->
             if (t.direction == TransactionDirection.EXPENSE) {
-                val amt = abs(t.amountMinor)
+                val amt = abs(getConvertedAmount(t, converter))
                 expenseCount++
                 if (amt > maxExpense.amountMinor) {
                     maxExpense = MaxExpenseItem(
@@ -85,7 +113,8 @@ class CalculateFinancialStatsUseCase {
     fun calculateMonthlyTrends(
         transactions: List<Transaction>,
         monthCount: Int = 6,
-        referenceDate: LocalDate = LocalDate.now()
+        referenceDate: LocalDate = LocalDate.now(),
+        converter: CurrencyAmountConverter? = null
     ): List<MonthlyTrend> {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM")
         val monthKeys = mutableListOf<String>()
@@ -101,10 +130,11 @@ class CalculateFinancialStatsUseCase {
         transactions.forEach { t ->
             val key = t.date.format(formatter)
             if (incomeMap.containsKey(key)) {
+                val convertedAmt = abs(getConvertedAmount(t, converter))
                 if (t.direction == TransactionDirection.INCOME) {
-                    incomeMap[key] = (incomeMap[key] ?: 0L) + abs(t.amountMinor)
+                    incomeMap[key] = (incomeMap[key] ?: 0L) + convertedAmt
                 } else if (t.direction == TransactionDirection.EXPENSE) {
-                    expenseMap[key] = (expenseMap[key] ?: 0L) + abs(t.amountMinor)
+                    expenseMap[key] = (expenseMap[key] ?: 0L) + convertedAmt
                 }
             }
         }
@@ -123,7 +153,8 @@ class CalculateFinancialStatsUseCase {
 
     fun calculateCategoryBreakdown(
         transactions: List<Transaction>,
-        categories: List<Category>
+        categories: List<Category>,
+        converter: CurrencyAmountConverter? = null
     ): List<CategoryBreakdown> {
         val catMap = categories.associateBy { it.id }
         val totals = mutableMapOf<String, Long>()
@@ -132,7 +163,7 @@ class CalculateFinancialStatsUseCase {
 
         transactions.filter { it.direction == TransactionDirection.EXPENSE }.forEach { t ->
             val catId = t.categoryId ?: "other"
-            val amt = abs(t.amountMinor)
+            val amt = abs(getConvertedAmount(t, converter))
             totalExpense += amt
             totals[catId] = (totals[catId] ?: 0L) + amt
             counts[catId] = (counts[catId] ?: 0) + 1

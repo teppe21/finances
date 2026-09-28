@@ -217,3 +217,25 @@ interface RecurringDao {
     @Delete
     suspend fun delete(rule: RecurringRuleEntity)
 }
+
+@Dao
+interface ExchangeRateDao {
+    @Query("SELECT * FROM exchange_rates WHERE baseCurrency = :base AND targetCurrency = :target AND rateDate = :date LIMIT 1")
+    suspend fun getRate(base: String, target: String, date: String): com.sajatpenzugyek.app.data.local.entity.ExchangeRateEntity?
+
+    @Query("SELECT * FROM exchange_rates WHERE baseCurrency = :base AND targetCurrency = :target AND rateDate = 'latest' LIMIT 1")
+    suspend fun getLatestRate(base: String, target: String): com.sajatpenzugyek.app.data.local.entity.ExchangeRateEntity?
+
+    @Query("SELECT * FROM exchange_rates WHERE rateDate = 'latest'")
+    fun getAllLatestRatesFlow(): Flow<List<com.sajatpenzugyek.app.data.local.entity.ExchangeRateEntity>>
+
+    @Query("SELECT * FROM exchange_rates WHERE rateDate = 'latest'")
+    suspend fun getAllLatestRates(): List<com.sajatpenzugyek.app.data.local.entity.ExchangeRateEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRates(rates: List<com.sajatpenzugyek.app.data.local.entity.ExchangeRateEntity>)
+
+    @Query("DELETE FROM exchange_rates WHERE rateDate = 'latest'")
+    suspend fun clearLatestRates()
+}
+

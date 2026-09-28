@@ -2,7 +2,7 @@ package com.sajatpenzugyek.app.feature.transactions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sajatpenzugyek.app.PenzugyekApp
+import com.sajatpenzugyek.app.FinancesApp
 import com.sajatpenzugyek.app.core.utils.TextNormalizer
 import com.sajatpenzugyek.app.domain.model.Account
 import com.sajatpenzugyek.app.domain.model.Category
@@ -30,6 +30,7 @@ enum class TransactionSortOrder {
 data class TransactionsUiState(
     val transactions: List<Transaction> = emptyList(),
     val filteredTransactions: List<Transaction> = emptyList(),
+    val convertedAmounts: Map<String, Long> = emptyMap(),
     val categories: List<Category> = emptyList(),
     val accounts: List<Account> = emptyList(),
     val selectedPeriod: String = "this_month",
@@ -37,15 +38,18 @@ data class TransactionsUiState(
     val searchQuery: String = "",
     val onlyRecurring: Boolean = false,
     val sortOrder: TransactionSortOrder = TransactionSortOrder.NEWEST,
-    val selectedTransaction: Transaction? = null
+    val selectedTransaction: Transaction? = null,
+    val currency: String = "HUF"
 )
 
 class TransactionsViewModel : ViewModel() {
 
-    private val app = PenzugyekApp.instance
+    private val app = FinancesApp.instance
     private val txRepo = app.transactionRepository
     private val catRepo = app.categoryRepository
     private val accountRepo = app.accountRepository
+    private val prefsRepo = app.preferencesRepository
+    private val fxRepo = app.exchangeRateRepository
     private val ingestUseCase = app.ingestTransactionUseCase
     private val recurringUseCase = app.detectRecurringUseCase
 
@@ -74,14 +78,39 @@ class TransactionsViewModel : ViewModel() {
         FilterParams(period, category, query, recurring, sort)
     }
 
-    val uiState: StateFlow<TransactionsUiState> = combine(
+    private data class TransactionRepoData(
+        val transactions: List<Transaction>,
+        val categories: List<Category>,
+        val accounts: List<Account>,
+        val preferences: com.sajatpenzugyek.app.data.local.preferences.UserPreferences,
+        val rates: Map<String, java.math.BigDecimal>
+    )
+
+    private val _repoDataFlow = combine(
         txRepo.getAllTransactionsFlow(),
         catRepo.getAllCategoriesFlow(),
         accountRepo.getAllAccountsFlow(),
+        prefsRepo.preferencesFlow,
+        fxRepo.ratesFlow
+    ) { txs, cats, accs, prefs, rates ->
+        TransactionRepoData(txs, cats, accs, prefs, rates)
+    }
+
+    val uiState: StateFlow<TransactionsUiState> = combine(
+        _repoDataFlow,
         _filterParams,
         _selectedTransaction
-    ) { allTx, cats, accs, filters, selectedTx ->
+    ) { data, filters, selectedTx ->
+        val allTx = data.transactions
+        val cats = data.categories
+        val accs = data.accounts
+        val targetCurrency = data.preferences.currency
         val recurringIds = if (filters.onlyRecurring) recurringUseCase.execute(allTx).recurringTransactionIds else emptySet()
+
+        // Compute converted amounts for all transactions in target display currency
+        val convertedMap = allTx.associate { tx ->
+            tx.id to (fxRepo.convert(tx.amountMinor, tx.currency, targetCurrency, tx.date) ?: tx.amountMinor)
+        }
 
         val now = LocalDate.now()
         val filtered = allTx.filter { tx ->
@@ -100,17 +129,19 @@ class TransactionsViewModel : ViewModel() {
             // 2. Category filter
             val catMatches = filters.category == "All" || tx.categoryId == filters.category
 
-            // 3. Recurring filter
-            val recMatches = !filters.onlyRecurring || recurringIds.contains(tx.id)
-
-            // 4. Search query
-            val searchMatches = if (filters.query.isBlank()) true else {
-                val normQ = TextNormalizer.normalizeSearch(filters.query)
-                val target = TextNormalizer.normalizeSearch("${tx.merchant ?: ""} ${tx.description} ${tx.notes ?: ""}")
-                target.contains(normQ)
+            // 3. Search query
+            val q = filters.query.trim().lowercase()
+            val queryMatches = if (q.isBlank()) true else {
+                val merchantNorm = TextNormalizer.normalizeSearch(tx.merchant ?: "")
+                val descNorm = TextNormalizer.normalizeSearch(tx.description)
+                val noteNorm = TextNormalizer.normalizeSearch(tx.notes ?: "")
+                merchantNorm.contains(q) || descNorm.contains(q) || noteNorm.contains(q)
             }
 
-            dateMatches && catMatches && recMatches && searchMatches
+            // 4. Recurring filter
+            val recurringMatches = !filters.onlyRecurring || recurringIds.contains(tx.id)
+
+            dateMatches && catMatches && queryMatches && recurringMatches
         }
 
         val sorted = when (filters.sortOrder) {
@@ -120,8 +151,12 @@ class TransactionsViewModel : ViewModel() {
             TransactionSortOrder.OLDEST -> filtered.sortedWith(
                 compareBy<Transaction> { it.date }.thenBy { it.createdAt }
             )
-            TransactionSortOrder.AMOUNT_DESC -> filtered.sortedByDescending { kotlin.math.abs(it.amountMinor) }
-            TransactionSortOrder.AMOUNT_ASC -> filtered.sortedBy { kotlin.math.abs(it.amountMinor) }
+            TransactionSortOrder.AMOUNT_DESC -> filtered.sortedByDescending {
+                kotlin.math.abs(convertedMap[it.id] ?: it.amountMinor)
+            }
+            TransactionSortOrder.AMOUNT_ASC -> filtered.sortedBy {
+                kotlin.math.abs(convertedMap[it.id] ?: it.amountMinor)
+            }
             TransactionSortOrder.MERCHANT_ASC -> filtered.sortedBy {
                 (it.merchant?.ifBlank { null } ?: it.description).lowercase()
             }
@@ -133,6 +168,7 @@ class TransactionsViewModel : ViewModel() {
         TransactionsUiState(
             transactions = allTx,
             filteredTransactions = sorted,
+            convertedAmounts = convertedMap,
             categories = cats,
             accounts = accs,
             selectedPeriod = filters.period,
@@ -140,7 +176,8 @@ class TransactionsViewModel : ViewModel() {
             searchQuery = filters.query,
             onlyRecurring = filters.onlyRecurring,
             sortOrder = filters.sortOrder,
-            selectedTransaction = selectedTx
+            selectedTransaction = selectedTx,
+            currency = targetCurrency
         )
     }.stateIn(
         scope = viewModelScope,
@@ -158,6 +195,7 @@ class TransactionsViewModel : ViewModel() {
     fun addManualTransaction(
         accountId: String,
         amountMinor: Long,
+        currency: String = "HUF",
         direction: TransactionDirection,
         description: String,
         merchant: String?,
@@ -170,7 +208,7 @@ class TransactionsViewModel : ViewModel() {
                     accountId = accountId,
                     date = date,
                     amountMinor = amountMinor,
-                    currency = "HUF",
+                    currency = currency,
                     direction = direction,
                     description = description,
                     merchant = merchant,

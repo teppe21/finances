@@ -28,6 +28,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.Instant
 
+import com.sajatpenzugyek.app.data.local.dao.ExchangeRateDao
+import com.sajatpenzugyek.app.data.local.entity.ExchangeRateEntity
+import androidx.room.migration.Migration
+
 @Database(
     entities = [
         TransactionEntity::class,
@@ -37,9 +41,10 @@ import java.time.Instant
         NotificationEventEntity::class,
         ReceiptEntity::class,
         BudgetEntity::class,
-        RecurringRuleEntity::class
+        RecurringRuleEntity::class,
+        ExchangeRateEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -53,10 +58,29 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun receiptDao(): ReceiptDao
     abstract fun budgetDao(): BudgetDao
     abstract fun recurringDao(): RecurringDao
+    abstract fun exchangeRateDao(): ExchangeRateDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `exchange_rates` (
+                        `baseCurrency` TEXT NOT NULL,
+                        `targetCurrency` TEXT NOT NULL,
+                        `rate` REAL NOT NULL,
+                        `rateDate` TEXT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        `provider` TEXT NOT NULL,
+                        PRIMARY KEY(`baseCurrency`, `targetCurrency`, `rateDate`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -65,8 +89,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "penzugyek.db"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .addCallback(DatabasePrepopulateCallback())
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                 INSTANCE = instance
                 instance

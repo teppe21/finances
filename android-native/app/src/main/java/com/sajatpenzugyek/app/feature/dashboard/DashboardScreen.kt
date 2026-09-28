@@ -140,7 +140,7 @@ fun DashboardScreen(
         // 5. Category Breakdown
         if (state.categoryBreakdown.isNotEmpty()) {
             item {
-                CategoryBreakdownCard(breakdown = state.categoryBreakdown)
+                CategoryBreakdownCard(breakdown = state.categoryBreakdown, currency = state.currency)
             }
         }
 
@@ -191,8 +191,11 @@ fun DashboardScreen(
             }
         } else {
             items(state.recentTransactions) { tx ->
+                val convertedItem = state.recentConvertedTransactions.firstOrNull { it.transaction.id == tx.id }
                 TransactionRowItem(
                     transaction = tx,
+                    displayCurrency = state.currency,
+                    convertedAmountMinor = convertedItem?.convertedAmountMinor ?: tx.amountMinor,
                     onClick = { onSelectTransaction(tx) }
                 )
             }
@@ -550,7 +553,10 @@ fun MonthlyTrendsChartCard(trends: List<MonthlyTrend>) {
 }
 
 @Composable
-fun CategoryBreakdownCard(breakdown: List<CategoryBreakdown>) {
+fun CategoryBreakdownCard(
+    breakdown: List<CategoryBreakdown>,
+    currency: String = "HUF"
+) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -590,7 +596,7 @@ fun CategoryBreakdownCard(breakdown: List<CategoryBreakdown>) {
                             )
                         }
                         Text(
-                            text = "${CurrencyFormatter.format(cat.totalMinor)} (${cat.percentage.toInt()}%)",
+                            text = "${CurrencyFormatter.format(cat.totalMinor, currency)} (${cat.percentage.toInt()}%)",
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -616,12 +622,15 @@ fun CategoryBreakdownCard(breakdown: List<CategoryBreakdown>) {
 @Composable
 fun TransactionRowItem(
     transaction: Transaction,
+    displayCurrency: String = transaction.currency,
+    convertedAmountMinor: Long = transaction.amountMinor,
     onClick: () -> Unit
 ) {
     val isIncome = transaction.direction == TransactionDirection.INCOME ||
         (transaction.direction == TransactionDirection.REFUND && transaction.amountMinor > 0)
     val isTransfer = transaction.direction == TransactionDirection.TRANSFER
     val catColor = CategoryColorProvider.getColor(transaction.categoryId)
+    val hasConversion = !displayCurrency.equals(transaction.currency, ignoreCase = true)
 
     Surface(
         modifier = Modifier
@@ -687,16 +696,23 @@ fun TransactionRowItem(
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
+                    val subtitle = if (hasConversion) {
+                        "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()} • Orig: ${CurrencyFormatter.formatSigned(transaction.amountMinor, transaction.currency)}"
+                    } else {
+                        "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()}"
+                    }
                     Text(
-                        text = "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()}",
+                        text = subtitle,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
+            val amountToShow = if (hasConversion) convertedAmountMinor else transaction.amountMinor
+            val currencyToShow = if (hasConversion) displayCurrency else transaction.currency
             Text(
-                text = CurrencyFormatter.formatSigned(transaction.amountMinor, transaction.currency),
+                text = CurrencyFormatter.formatSigned(amountToShow, currencyToShow),
                 style = MaterialTheme.typography.titleMedium,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,

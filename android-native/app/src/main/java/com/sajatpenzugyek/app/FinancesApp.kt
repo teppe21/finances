@@ -31,6 +31,8 @@ class FinancesApp : Application() {
         private set
     lateinit var preferencesRepository: UserPreferencesRepository
         private set
+    lateinit var exchangeRateRepository: com.sajatpenzugyek.app.data.fx.ExchangeRateRepository
+        private set
 
     // Use cases
     lateinit var calculateStatsUseCase: CalculateFinancialStatsUseCase
@@ -62,6 +64,7 @@ class FinancesApp : Application() {
         notificationRepository = NotificationRepository(database.notificationDao())
         receiptRepository = ReceiptRepository(database.receiptDao())
         preferencesRepository = UserPreferencesRepository(this)
+        exchangeRateRepository = com.sajatpenzugyek.app.data.fx.ExchangeRateRepository(database.exchangeRateDao())
 
         calculateStatsUseCase = CalculateFinancialStatsUseCase()
         categorizeUseCase = CategorizeTransactionUseCase()

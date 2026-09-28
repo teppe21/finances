@@ -2,20 +2,27 @@ package com.sajatpenzugyek.app.feature.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sajatpenzugyek.app.PenzugyekApp
+import com.sajatpenzugyek.app.FinancesApp
 import com.sajatpenzugyek.app.domain.model.CategoryBreakdown
 import com.sajatpenzugyek.app.domain.model.FinancialStats
 import com.sajatpenzugyek.app.domain.model.MonthlyTrend
 import com.sajatpenzugyek.app.domain.model.Transaction
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.sajatpenzugyek.app.domain.usecase.CurrencyAmountConverter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+data class ConvertedTransaction(
+    val transaction: Transaction,
+    val convertedAmountMinor: Long,
+    val displayCurrency: String
+)
+
 data class DashboardUiState(
     val stats: FinancialStats = FinancialStats(),
     val recentTransactions: List<Transaction> = emptyList(),
+    val recentConvertedTransactions: List<ConvertedTransaction> = emptyList(),
     val monthlyTrends: List<MonthlyTrend> = emptyList(),
     val categoryBreakdown: List<CategoryBreakdown> = emptyList(),
     val pendingNotificationCount: Int = 0,
@@ -25,31 +32,46 @@ data class DashboardUiState(
 
 class DashboardViewModel : ViewModel() {
 
-    private val app = PenzugyekApp.instance
+    private val app = FinancesApp.instance
     private val txRepo = app.transactionRepository
     private val catRepo = app.categoryRepository
     private val notifRepo = app.notificationRepository
     private val statsUseCase = app.calculateStatsUseCase
     private val prefsRepo = app.preferencesRepository
+    private val fxRepo = app.exchangeRateRepository
 
     val uiState: StateFlow<DashboardUiState> = combine(
         txRepo.getAllTransactionsFlow(),
         catRepo.getAllCategoriesFlow(),
         notifRepo.getPendingNotificationsFlow(),
-        prefsRepo.preferencesFlow
-    ) { transactions, categories, pendingNotifs, prefs ->
-        val stats = statsUseCase.execute(transactions)
-        val trends = statsUseCase.calculateMonthlyTrends(transactions)
-        val breakdown = statsUseCase.calculateCategoryBreakdown(transactions, categories)
+        prefsRepo.preferencesFlow,
+        fxRepo.ratesFlow
+    ) { transactions, categories, pendingNotifs, prefs, _ ->
+        val targetCurrency = prefs.currency
+        val converter: CurrencyAmountConverter = { amountMinor, currency, date ->
+            fxRepo.convert(amountMinor, currency, targetCurrency, date) ?: amountMinor
+        }
+
+        val stats = statsUseCase.execute(transactions, converter)
+        val trends = statsUseCase.calculateMonthlyTrends(transactions, converter = converter)
+        val breakdown = statsUseCase.calculateCategoryBreakdown(transactions, categories, converter = converter)
         val recent = transactions.take(5)
+        val recentConverted = recent.map { tx ->
+            ConvertedTransaction(
+                transaction = tx,
+                convertedAmountMinor = fxRepo.convert(tx.amountMinor, tx.currency, targetCurrency, tx.date) ?: tx.amountMinor,
+                displayCurrency = targetCurrency
+            )
+        }
 
         DashboardUiState(
             stats = stats,
             recentTransactions = recent,
+            recentConvertedTransactions = recentConverted,
             monthlyTrends = trends,
             categoryBreakdown = breakdown,
             pendingNotificationCount = pendingNotifs.size,
-            currency = prefs.currency,
+            currency = targetCurrency,
             isLoading = false
         )
     }.stateIn(

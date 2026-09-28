@@ -138,3 +138,17 @@ data class RecurringRuleEntity(
     val nextDate: LocalDate?,
     val isActive: Boolean
 )
+
+@Entity(
+    tableName = "exchange_rates",
+    primaryKeys = ["baseCurrency", "targetCurrency", "rateDate"]
+)
+data class ExchangeRateEntity(
+    val baseCurrency: String,
+    val targetCurrency: String,
+    val rate: Double,
+    val rateDate: String, // "latest" or "YYYY-MM-DD"
+    val timestamp: Instant,
+    val provider: String
+)
+

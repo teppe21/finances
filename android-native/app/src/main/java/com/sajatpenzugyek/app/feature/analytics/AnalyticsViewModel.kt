@@ -2,7 +2,9 @@ package com.sajatpenzugyek.app.feature.analytics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sajatpenzugyek.app.PenzugyekApp
+import com.sajatpenzugyek.app.FinancesApp
+import com.sajatpenzugyek.app.data.local.preferences.UserPreferences
+import com.sajatpenzugyek.app.domain.model.Category
 import com.sajatpenzugyek.app.domain.model.CategoryBreakdown
 import com.sajatpenzugyek.app.domain.model.FinancialStats
 import com.sajatpenzugyek.app.domain.model.MonthlyTrend
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.abs
@@ -49,10 +52,11 @@ data class AnalyticsUiState(
 )
 
 class AnalyticsViewModel : ViewModel() {
-    private val app = PenzugyekApp.instance
+    private val app = FinancesApp.instance
     private val txRepo = app.transactionRepository
     private val catRepo = app.categoryRepository
     private val prefsRepo = app.preferencesRepository
+    private val fxRepo = app.exchangeRateRepository
     private val statsUseCase = CalculateFinancialStatsUseCase()
 
     private val _periodState = MutableStateFlow(
@@ -75,12 +79,29 @@ class AnalyticsViewModel : ViewModel() {
         val dateError: Boolean
     )
 
-    val uiState: StateFlow<AnalyticsUiState> = combine(
+    private data class AnalyticsSourceData(
+        val transactions: List<Transaction>,
+        val categories: List<Category>,
+        val preferences: UserPreferences,
+        val rates: Map<String, BigDecimal>
+    )
+
+    private val _sourceDataFlow = combine(
         txRepo.getAllTransactionsFlow(),
         catRepo.getAllCategoriesFlow(),
         prefsRepo.preferencesFlow,
+        fxRepo.ratesFlow
+    ) { transactions, categories, prefs, rates ->
+        AnalyticsSourceData(transactions, categories, prefs, rates)
+    }
+
+    val uiState: StateFlow<AnalyticsUiState> = combine(
+        _sourceDataFlow,
         _periodState
-    ) { transactions, categories, prefs, periodState ->
+    ) { sourceData, periodState ->
+        val transactions = sourceData.transactions
+        val categories = sourceData.categories
+        val prefs = sourceData.preferences
         val (startDate, endDate) = resolveDateRange(
             periodState.period,
             periodState.customStart,
@@ -91,22 +112,28 @@ class AnalyticsViewModel : ViewModel() {
             !tx.date.isBefore(startDate) && !tx.date.isAfter(endDate)
         }
 
-        val stats = statsUseCase.execute(filteredTx)
-        val breakdown = statsUseCase.calculateCategoryBreakdown(filteredTx, categories)
+        val targetCurrency = prefs.currency
+        val converter: (Long, String, LocalDate) -> Long = { amountMinor, currency, date ->
+            fxRepo.convert(amountMinor, currency, targetCurrency, date) ?: amountMinor
+        }
+
+        val stats = statsUseCase.execute(filteredTx, converter)
+        val breakdown = statsUseCase.calculateCategoryBreakdown(filteredTx, categories, converter = converter)
         val trends = statsUseCase.calculateMonthlyTrends(
             filteredTx,
             monthCount = determineMonthCount(periodState.period, startDate, endDate),
-            referenceDate = endDate
+            referenceDate = endDate,
+            converter = converter
         )
 
-        // Top merchants calculation
+        // Top merchants calculation with converted currency
         val topMerchants = filteredTx
             .filter { it.direction == TransactionDirection.EXPENSE }
             .groupBy { it.merchant?.trim()?.ifBlank { null } ?: it.description.trim() }
             .map { (name, list) ->
                 MerchantSpending(
                     merchant = name,
-                    totalMinor = list.sumOf { abs(it.amountMinor) },
+                    totalMinor = list.sumOf { abs(converter(it.amountMinor, it.currency, it.date)) },
                     count = list.size
                 )
             }
@@ -123,7 +150,7 @@ class AnalyticsViewModel : ViewModel() {
             monthlyTrends = trends,
             topMerchants = topMerchants,
             selectedCategoryId = periodState.selectedCatId,
-            currency = prefs.currency,
+            currency = targetCurrency,
             dateValidationError = periodState.dateError
         )
     }.stateIn(

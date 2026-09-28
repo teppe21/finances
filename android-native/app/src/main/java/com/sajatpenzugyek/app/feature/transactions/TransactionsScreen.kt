@@ -223,6 +223,8 @@ fun TransactionsScreen(
                     items(state.filteredTransactions, key = { it.id }) { tx ->
                         TransactionCard(
                             transaction = tx,
+                            displayCurrency = state.currency,
+                            convertedAmountMinor = state.convertedAmounts[tx.id] ?: tx.amountMinor,
                             onClick = { viewModel.selectTransaction(tx) }
                         )
                     }
@@ -311,6 +313,8 @@ fun TransactionsScreen(
             ) {
                 TransactionDetailContent(
                     transaction = selected,
+                    displayCurrency = state.currency,
+                    convertedAmountMinor = state.convertedAmounts[selected.id] ?: selected.amountMinor,
                     onDelete = { transactionToDelete = selected },
                     onClose = { viewModel.selectTransaction(null) }
                 )
@@ -322,9 +326,10 @@ fun TransactionsScreen(
             AddTransactionDialog(
                 accounts = state.accounts,
                 categories = state.categories,
+                defaultCurrency = state.currency,
                 onDismiss = { showAddModal = false },
-                onConfirm = { accId, amtMinor, dir, desc, merch, catId, date ->
-                    viewModel.addManualTransaction(accId, amtMinor, dir, desc, merch, catId, date)
+                onConfirm = { accId, amtMinor, curr, dir, desc, merch, catId, date ->
+                    viewModel.addManualTransaction(accId, amtMinor, curr, dir, desc, merch, catId, date)
                     showAddModal = false
                 }
             )
@@ -360,12 +365,15 @@ fun TransactionsScreen(
 @Composable
 fun TransactionCard(
     transaction: Transaction,
+    displayCurrency: String = transaction.currency,
+    convertedAmountMinor: Long = transaction.amountMinor,
     onClick: () -> Unit
 ) {
     val isIncome = transaction.direction == TransactionDirection.INCOME ||
         (transaction.direction == TransactionDirection.REFUND && transaction.amountMinor > 0)
     val isTransfer = transaction.direction == TransactionDirection.TRANSFER
     val catColor = CategoryColorProvider.getColor(transaction.categoryId)
+    val hasConversion = !displayCurrency.equals(transaction.currency, ignoreCase = true)
 
     Card(
         modifier = Modifier
@@ -431,16 +439,23 @@ fun TransactionCard(
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
+                    val subtitle = if (hasConversion) {
+                        "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()} • Orig: ${CurrencyFormatter.formatSigned(transaction.amountMinor, transaction.currency)}"
+                    } else {
+                        "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()}"
+                    }
                     Text(
-                        text = "${DateFormatter.format(transaction.date)} • ${transaction.source.getDisplayName()}",
+                        text = subtitle,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
+            val amountToShow = if (hasConversion) convertedAmountMinor else transaction.amountMinor
+            val currencyToShow = if (hasConversion) displayCurrency else transaction.currency
             Text(
-                text = CurrencyFormatter.formatSigned(transaction.amountMinor, transaction.currency),
+                text = CurrencyFormatter.formatSigned(amountToShow, currencyToShow),
                 style = MaterialTheme.typography.titleMedium,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
@@ -457,6 +472,8 @@ fun TransactionCard(
 @Composable
 fun TransactionDetailContent(
     transaction: Transaction,
+    displayCurrency: String = transaction.currency,
+    convertedAmountMinor: Long = transaction.amountMinor,
     onDelete: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -481,13 +498,28 @@ fun TransactionDetailContent(
             }
         }
 
+        val hasConversion = !displayCurrency.equals(transaction.currency, ignoreCase = true)
+        val amountToShow = if (hasConversion) convertedAmountMinor else transaction.amountMinor
+        val currencyToShow = if (hasConversion) displayCurrency else transaction.currency
+
         Text(
-            text = CurrencyFormatter.formatSigned(transaction.amountMinor, transaction.currency),
+            text = CurrencyFormatter.formatSigned(amountToShow, currencyToShow),
             style = MaterialTheme.typography.headlineLarge,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
             color = if (transaction.amountMinor > 0) Emerald500 else MaterialTheme.colorScheme.onSurface
         )
+
+        if (hasConversion) {
+            DetailRow(
+                label = "Original Amount",
+                value = CurrencyFormatter.formatSigned(transaction.amountMinor, transaction.currency)
+            )
+            DetailRow(
+                label = "Display Conversion",
+                value = "${transaction.currency} → $displayCurrency"
+            )
+        }
 
         val context = LocalContext.current
         DetailRow(label = stringResource(R.string.date), value = DateFormatter.format(transaction.date))
@@ -527,10 +559,21 @@ fun DetailRow(label: String, value: String) {
 fun AddTransactionDialog(
     accounts: List<com.sajatpenzugyek.app.domain.model.Account>,
     categories: List<com.sajatpenzugyek.app.domain.model.Category>,
+    defaultCurrency: String = "HUF",
     onDismiss: () -> Unit,
-    onConfirm: (accountId: String, amountMinor: Long, direction: TransactionDirection, description: String, merchant: String?, categoryId: String?, date: LocalDate) -> Unit
+    onConfirm: (
+        accountId: String,
+        amountMinor: Long,
+        currency: String,
+        direction: TransactionDirection,
+        description: String,
+        merchant: String?,
+        categoryId: String?,
+        date: LocalDate
+    ) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
+    var selectedCurrency by remember { mutableStateOf(defaultCurrency) }
     var descriptionText by remember { mutableStateOf("") }
     var merchantText by remember { mutableStateOf("") }
     var isExpense by remember { mutableStateOf(true) }
@@ -563,10 +606,28 @@ fun AddTransactionDialog(
                     }
                 }
 
+                Text(
+                    text = stringResource(R.string.currency),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    com.sajatpenzugyek.app.domain.model.SupportedCurrencies.ALL.forEach { curr ->
+                        FilterChip(
+                            selected = selectedCurrency.equals(curr.code, ignoreCase = true),
+                            onClick = { selectedCurrency = curr.code },
+                            label = { Text("${curr.code} (${curr.symbol})", style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it.filter { c -> c.isDigit() } },
-                    label = { Text(stringResource(R.string.amount) + " (Ft)") },
+                    label = { Text(stringResource(R.string.amount) + " (${selectedCurrency})") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -615,7 +676,7 @@ fun AddTransactionDialog(
                     val minor = major * 100L
                     val dir = if (isExpense) TransactionDirection.EXPENSE else TransactionDirection.INCOME
                     val desc = descriptionText.ifBlank { merchantText.ifBlank { "Manual Entry" } }
-                    onConfirm(selectedAccountId, if (isExpense) -minor else minor, dir, desc, merchantText.ifBlank { null }, selectedCategoryId, LocalDate.now())
+                    onConfirm(selectedAccountId, if (isExpense) -minor else minor, selectedCurrency, dir, desc, merchantText.ifBlank { null }, selectedCategoryId, LocalDate.now())
                 },
                 enabled = amountText.isNotBlank()
             ) {

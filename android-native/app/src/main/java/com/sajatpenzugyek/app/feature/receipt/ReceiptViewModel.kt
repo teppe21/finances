@@ -68,7 +68,7 @@ class ReceiptViewModel : ViewModel() {
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,
-                    errorMessage = e.message ?: "OCR hiba"
+                    errorMessage = e.message ?: "OCR error"
                 )
             }
         }
@@ -84,7 +84,7 @@ class ReceiptViewModel : ViewModel() {
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,
-                    errorMessage = e.message ?: "OCR hiba"
+                    errorMessage = e.message ?: "OCR error"
                 )
             }
         }
@@ -133,12 +133,13 @@ class ReceiptViewModel : ViewModel() {
         date: LocalDate,
         accountId: String,
         categoryId: String,
+        currency: String = "HUF",
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             val scan = _uiState.value.scannedReceipt
             if (scan != null) {
-                receiptRepo.insertReceipt(scan.copy(merchant = merchant, totalMinor = amountMinor, date = date))
+                receiptRepo.insertReceipt(scan.copy(merchant = merchant, totalMinor = amountMinor, date = date, currency = currency))
             }
 
             ingestUseCase.execute(
@@ -146,9 +147,9 @@ class ReceiptViewModel : ViewModel() {
                     accountId = accountId,
                     date = date,
                     amountMinor = -kotlin.math.abs(amountMinor),
-                    currency = "HUF",
+                    currency = currency,
                     direction = TransactionDirection.EXPENSE,
-                    description = "$merchant (Nyugta)",
+                    description = "$merchant (Receipt)",
                     merchant = merchant,
                     categoryId = categoryId,
                     source = TransactionSource.RECEIPT,

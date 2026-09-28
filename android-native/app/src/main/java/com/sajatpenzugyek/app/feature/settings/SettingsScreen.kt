@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -107,7 +110,7 @@ fun SettingsScreen(
             }
         }
 
-        // 3. Currency
+        // 3. Currency & FX
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -137,6 +140,74 @@ fun SettingsScreen(
                             onClick = { viewModel.setCurrency("USD") },
                             label = { Text("USD ($)") }
                         )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = prefs.currency == "GBP",
+                            onClick = { viewModel.setCurrency("GBP") },
+                            label = { Text("GBP (£)") }
+                        )
+                        FilterChip(
+                            selected = prefs.currency == "CHF",
+                            onClick = { viewModel.setCurrency("CHF") },
+                            label = { Text("CHF (Fr)") }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val isSyncing by viewModel.isSyncingRates.collectAsState()
+                    val lastSync by viewModel.lastRatesSync.collectAsState()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Exchange Rates",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val syncText = if (isSyncing) {
+                                "Updating real FX rates..."
+                            } else if (lastSync != null) {
+                                val formatted = java.time.format.DateTimeFormatter
+                                    .ofPattern("yyyy-MM-dd HH:mm")
+                                    .withZone(java.time.ZoneId.systemDefault())
+                                    .format(lastSync)
+                                "ECB / Frankfurter (live)\nUpdated: $formatted"
+                            } else {
+                                "ECB / Frankfurter (cached)"
+                            }
+                            Text(
+                                text = syncText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        androidx.compose.material3.IconButton(
+                            onClick = { viewModel.refreshExchangeRates() },
+                            enabled = !isSyncing
+                        ) {
+                            if (isSyncing) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                androidx.compose.material3.Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Refresh,
+                                    contentDescription = "Refresh exchange rates"
+                                )
+                            }
+                        }
                     }
                 }
             }
