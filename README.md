@@ -127,8 +127,10 @@ An Android `NotificationListenerService` captures transaction notifications from
 
 ## 📱 App UI Overview
 
-<img width="1200" height="2670" alt="Screenshot_2026-09-28-22-18-43-068_com sajatpenzugyek app" src="https://github.com/user-attachments/assets/3cc79bb8-c940-4d41-8e9a-7207f1c111e5" />
-<img width="1200" height="2670" alt="Screenshot_2026-09-28-22-18-16-797_com sajatpenzugyek app" src="https://github.com/user-attachments/assets/606a58a3-0908-4a90-ba6d-92f046aae72b" />
+
+<img width="250" alt="IMG_20260928_222037" src="https://github.com/user-attachments/assets/1f0eb046-ee09-495e-ad3c-7f71b934b7c5" />
+<img width="250" alt="IMG_20260928_222013" src="https://github.com/user-attachments/assets/ee7a2448-cbb9-4e39-9988-2a41f7c3be3f" />
+
 
 
 ---
