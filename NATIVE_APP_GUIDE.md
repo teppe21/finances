@@ -1,28 +1,24 @@
-# Saját Pénzügyek - 100% Natív Android Alkalmazás
+# Finances - 100% Native Android Application
 
-## 📱 Elérhető APK Fájlok (Telepítésre kész)
+## 📱 Available APK File (Ready to Install)
 
-Az alkalmazás teljes natív (Kotlin + Jetpack Compose + Room + CameraX + ML Kit) verziója sikeresen lefordult és aláírásra került. A telepítő fájlok közvetlenül elérhetők a projekt gyökerében:
+The fully native (Kotlin + Jetpack Compose + Room + CameraX + ML Kit) Android application has been compiled and is available directly in the project root:
 
-1. **Optimalizált verzió (Ajánlott):**
-   - **Útvonal:** `G:\penzugyi-dashboard\penzugyek-native.apk`
-   - **Méret:** ~53.3 MB (teljes offline ML Kit neurális hálót, CameraX motort és SQLite adatbázist tartalmaz)
-2. **Debug verzió:**
-   - **Útvonal:** `G:\penzugyi-dashboard\penzugyek-native-debug.apk`
-   - **Méret:** ~59.4 MB
+- **Path:** `G:\penzugyi-dashboard\finances-native.apk`
+- **Size:** ~58.8 MB (includes offline ML Kit text recognition engine, CameraX, and local SQLite/Room database)
 
 ---
 
-## 🚀 Telepítés a telefonra lépésről lépésre
+## 🚀 Installation Guide
 
-1. **Fájl átvitele a telefonra:**
-   - Csatlakoztasd a telefonodat USB-kábellel a géphez, és másold át a `penzugyek-native.apk` fájlt a *Letöltések (Downloads)* mappába.
-   - **VAGY** küldd át magadnak Telegramon, Google Drive-on, vagy helyi hálózaton keresztül.
-2. **Telepítés engedélyezése:**
-   - A telefonodon nyisd meg a *Fájlkezelőt (File Manager)*, koppints a `penzugyek-native.apk`-ra.
-   - Ha a telefon rákérdez, engedélyezd az *„Ismeretlen forrásból származó alkalmazások telepítése”* (Install unknown apps) opciót a fájlkezelő számára.
-3. **Megnyitás:**
-   - Koppints a **Telepítés** gombra, majd nyisd meg az alkalmazást (**Saját Pénzügyek** néven találod meg az app fiókban).
+1. **Transfer to your phone:**
+   - Connect your phone to your PC via USB cable and copy `finances-native.apk` to your *Downloads* folder.
+   - **OR** transfer via Google Drive, Telegram, or local network.
+2. **Install:**
+   - On your phone, open *File Manager*, tap `finances-native.apk`.
+   - If prompted, allow *Install unknown apps* for the file manager.
+3. **Launch:**
+   - Tap **Install / Update**, then open **Finances** from your app drawer.
 
 ---
 
