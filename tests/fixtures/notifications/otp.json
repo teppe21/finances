@@ -1,0 +1,50 @@
+[
+  {
+    "description": "OTP POS purchase with merchant place and card",
+    "raw": {
+      "packageName": "hu.otpbank.smartbank",
+      "applicationLabel": "OTP SmartBank",
+      "title": "Kártyás vásárlás",
+      "text": "Kártyás vásárlás: -4.500 Ft, Időpont: 2026.03.01 14:22, Hely: SPAR BUDAPEST, Kártya: *1234",
+      "postedAt": "2026-03-01T14:22:00Z"
+    },
+    "expected": {
+      "merchant": "SPAR BUDAPEST",
+      "amountMinor": -450000,
+      "currency": "HUF",
+      "direction": "expense",
+      "cardLast4": "1234"
+    }
+  },
+  {
+    "description": "OTP Salary credit",
+    "raw": {
+      "packageName": "hu.otpbank.smartbank",
+      "applicationLabel": "OTP SmartBank",
+      "title": "Jóváírás",
+      "text": "Jóváírás: +650 000 Ft, Közlemény: Munkabér ACME Corp",
+      "postedAt": "2026-03-01T08:00:00Z"
+    },
+    "expected": {
+      "amountMinor": 65000000,
+      "currency": "HUF",
+      "direction": "income"
+    }
+  },
+  {
+    "description": "OTP Simple payment",
+    "raw": {
+      "packageName": "hu.otpbank.simple",
+      "applicationLabel": "Simple",
+      "title": "Sikeres fizetés",
+      "text": "Sikeres fizetés: 3 800 HUF - McDonald's",
+      "postedAt": "2026-03-06T19:30:00Z"
+    },
+    "expected": {
+      "merchant": "McDonald's",
+      "amountMinor": -380000,
+      "currency": "HUF",
+      "direction": "expense"
+    }
+  }
+]

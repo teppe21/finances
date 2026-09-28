@@ -1,0 +1,64 @@
+[
+  {
+    "description": "Standard card purchase in Hungarian",
+    "raw": {
+      "packageName": "com.revolut.revolut",
+      "applicationLabel": "Revolut",
+      "title": "Fizetés a következőnek: LIDL",
+      "text": "14 500 Ft értékben",
+      "postedAt": "2026-03-01T14:32:00Z"
+    },
+    "expected": {
+      "merchant": "LIDL",
+      "amountMinor": -1450000,
+      "currency": "HUF",
+      "direction": "expense"
+    }
+  },
+  {
+    "description": "Standard card purchase in English",
+    "raw": {
+      "packageName": "com.revolut.revolut",
+      "applicationLabel": "Revolut",
+      "title": "Card payment",
+      "text": "Paid 4,200 HUF to Wolt Hungary",
+      "postedAt": "2026-03-02T12:15:00Z"
+    },
+    "expected": {
+      "merchant": "Wolt Hungary",
+      "amountMinor": -420000,
+      "currency": "HUF",
+      "direction": "expense"
+    }
+  },
+  {
+    "description": "Incoming transfer in HUF",
+    "raw": {
+      "packageName": "com.revolut.revolut",
+      "applicationLabel": "Revolut",
+      "title": "Pénz érkezett",
+      "text": "You received 50 000 Ft from Kovács János",
+      "postedAt": "2026-03-05T09:00:00Z"
+    },
+    "expected": {
+      "amountMinor": 5000000,
+      "currency": "HUF",
+      "direction": "income"
+    }
+  },
+  {
+    "description": "Refund payment",
+    "raw": {
+      "packageName": "com.revolut.revolut",
+      "applicationLabel": "Revolut",
+      "title": "Visszatérítés",
+      "text": "Visszatérítés: 3 450 Ft a Wolt Hungary-től",
+      "postedAt": "2026-03-06T11:20:00Z"
+    },
+    "expected": {
+      "amountMinor": 345000,
+      "currency": "HUF",
+      "direction": "refund"
+    }
+  }
+]

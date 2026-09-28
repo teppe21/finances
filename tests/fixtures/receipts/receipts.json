@@ -1,0 +1,36 @@
+[
+  {
+    "description": "LIDL Hungarian Supermarket with Cash payment and VAT",
+    "rawOcrText": "LIDL MAGYARORSZÁG KFT.\n4031 DEBRECEN, KISHEGYESI ÚT 1-3.\nNYUGTA\n2026.03.27 16:45\nPÉNZTÁR: 02\nPILOS TEJ 2,8% 1L 399 Ft\nSZENTKIRÁLYI ÁSVÁNYVÍZ 189 Ft\nPÉKSÜTEMÉNY 350 Ft\nCSIRKEMELL FILÉ 1890 Ft\nÖSSZESEN: 2 828 Ft\nÁFA TARTALOM: 520 Ft\nFIZETENDŐ: 2 828 Ft\nKÉSZPÉNZ: 3 000 Ft\nVISSZAJÁRÓ: 172 Ft\nKÖSZÖNJÜK A VÁSÁRLÁST!",
+    "expected": {
+      "merchant": "Lidl",
+      "totalMinor": 282800,
+      "taxMinor": 52000,
+      "paymentMethod": "cash",
+      "currency": "HUF",
+      "date": "2026-03-27"
+    }
+  },
+  {
+    "description": "Restaurant receipt with card payment",
+    "rawOcrText": "TRATTORIA VENEZIA ÉTTEREM\nBUDAPEST, V. KERÜLET\nEGYSZERŰSÍTETT SZÁMLA\n2026-03-25 20:10\n1x PIZZA MARGHERITA 3 200 Ft\n1x LIMONÁDÉ 0.5L 1 100 Ft\n1x ESPRESSO 650 Ft\nVÉGÖSSZEG: 4 950 Ft\nFIZETÉSI MÓD: BANKKÁRTYA\nTERMINÁL: VISA CONTACTLESS\nTRX: OK",
+    "expected": {
+      "merchant": "Trattoria Venezia",
+      "totalMinor": 495000,
+      "paymentMethod": "card",
+      "currency": "HUF",
+      "date": "2026-03-25"
+    }
+  },
+  {
+    "description": "OCR with noise and character substitutions (FIZETEND0)",
+    "rawOcrText": "SPAR MAGYARORSZÁG\nNYUGTA 2026.02.14\nALMA 1KG 650\nBANÁN 1KG 790\nFIZETEND0: 1 440 Ft\nKÉSZPÉNZ: 2000 Ft\nVISSZAJÁRÓ: 560 Ft",
+    "expected": {
+      "merchant": "Spar",
+      "totalMinor": 144000,
+      "paymentMethod": "cash",
+      "currency": "HUF",
+      "date": "2026-02-14"
+    }
+  }
+]

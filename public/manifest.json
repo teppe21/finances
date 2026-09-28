@@ -1,0 +1,18 @@
+{
+  "name": "Pénzügyek - Pénzügyi Menedzser",
+  "short_name": "Pénzügyek",
+  "description": "Prémium, biztonságos és intelligens személyes pénzügyi alkalmazás",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
