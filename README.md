@@ -1,4 +1,4 @@
-# Finances (Pénzügyek)
+# Finances 
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-2024.02.01-4285F4.svg?logo=android&logoColor=white)](https://developer.android.com/jetpack/compose)
