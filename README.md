@@ -154,22 +154,26 @@ An Android `NotificationListenerService` captures transaction notifications from
 
 ```text
 finances/
+├── finances-native.apk              # Install-ready native Android APK (built in root)
+├── NATIVE_APP_GUIDE.md              # Android phone installation & quick-start guide
 ├── android-native/                  # 100% Native Android Application
 │   ├── app/
 │   │   ├── src/main/java/com/sajatpenzugyek/app/
-│   │   │   ├── core/                # Theme, Currency Formatter, Text Normalizer
+│   │   │   ├── core/                # Theme, Currency & Date Formatter, Text Normalizer
 │   │   │   ├── data/                # Room SQLite Entities, DAOs, Repositories
 │   │   │   ├── domain/              # UseCases (Ingest, Dedup, Recurring, Stats)
 │   │   │   ├── feature/             # Jetpack Compose Screens & ViewModels
-│   │   │   │   ├── dashboard/       # Main Overview & Metrics
-│   │   │   │   ├── transactions/    # Sorted & Filtered Transaction List
-│   │   │   │   ├── analytics/       # Interactive Donut Chart & Trends
+│   │   │   │   ├── dashboard/       # Main Overview & Financial Metrics
+│   │   │   │   ├── transactions/    # Filtered & Sorted Transaction List
+│   │   │   │   ├── analytics/       # Interactive Donut Chart & Cash Flow Trends
 │   │   │   │   ├── categories/      # Category & Keyword Rules Management
 │   │   │   │   ├── receipt/         # CameraX + ML Kit OCR Scanner
 │   │   │   │   ├── notifications/   # Bank Notification Automation & Test Lab
 │   │   │   │   ├── importcsv/       # Bank Statement CSV Importer
-│   │   │   │   └── settings/        # Privacy manifesto, Theme, PIN Lock
-│   │   │   └── native/              # NotificationListenerService & Bank Parsers
+│   │   │   │   └── settings/        # Privacy Manifesto, Theme, PIN Lock
+│   │   │   ├── native/              # NotificationListenerService & Bank Parsers
+│   │   │   ├── FinancesApp.kt       # Application class (English locale enforcement)
+│   │   │   └── MainActivity.kt      # Edge-to-edge Compose host activity
 │   │   ├── src/test/java/           # Comprehensive Unit Test Suite
 │   │   └── build.gradle.kts         # App dependencies (Compose BOM, Room, ML Kit)
 │   ├── gradlew                      # Gradle Wrapper script (Linux/macOS)

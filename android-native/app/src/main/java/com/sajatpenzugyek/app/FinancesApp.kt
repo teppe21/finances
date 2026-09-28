@@ -14,7 +14,7 @@ import com.sajatpenzugyek.app.domain.usecase.DeduplicateTransactionUseCase
 import com.sajatpenzugyek.app.domain.usecase.DetectRecurringTransactionsUseCase
 import com.sajatpenzugyek.app.domain.usecase.IngestTransactionUseCase
 
-class PenzugyekApp : Application() {
+class FinancesApp : Application() {
 
     lateinit var database: AppDatabase
         private set
@@ -77,7 +77,9 @@ class PenzugyekApp : Application() {
     }
 
     companion object {
-        lateinit var instance: PenzugyekApp
+        lateinit var instance: FinancesApp
             private set
     }
 }
+
+typealias PenzugyekApp = FinancesApp
