@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -17,6 +18,7 @@ import java.time.LocalDate
 class ExchangeRateRepository(
     private val dao: ExchangeRateDao,
     private val provider: ExchangeRateProvider = CompositeRateProvider(),
+    private val prefsRepo: com.sajatpenzugyek.app.data.local.preferences.UserPreferencesRepository? = null,
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
     private val _ratesState = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
@@ -59,7 +61,19 @@ class ExchangeRateRepository(
         }
     }
 
-    suspend fun refreshRates(baseCurrency: String = "EUR"): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun refreshRates(baseCurrency: String = "EUR", forceOnline: Boolean = false): Result<Unit> = withContext(Dispatchers.IO) {
+        if (!forceOnline && prefsRepo != null) {
+            val autoSync = try {
+                prefsRepo.preferencesFlow.first().autoSyncFxRates
+            } catch (_: Exception) {
+                true
+            }
+            if (!autoSync) {
+                _isOffline.value = true
+                return@withContext Result.success(Unit)
+            }
+        }
+
         _isSyncing.value = true
         try {
             val result = provider.getLatestRates(baseCurrency)
@@ -95,6 +109,25 @@ class ExchangeRateRepository(
         } finally {
             _isSyncing.value = false
         }
+    }
+
+    suspend fun setManualRate(targetCurrency: String, rate: BigDecimal): Result<Unit> = withContext(Dispatchers.IO) {
+        val now = Instant.now()
+        val code = targetCurrency.uppercase().trim()
+        val entity = ExchangeRateEntity(
+            baseCurrency = "EUR",
+            targetCurrency = code,
+            rate = rate.toDouble(),
+            rateDate = "manual",
+            timestamp = now,
+            provider = "Manual"
+        )
+        dao.insertRates(listOf(entity))
+        val current = _ratesState.value.toMutableMap()
+        current[code] = rate
+        _ratesState.value = current
+        _lastSyncInstant.value = now
+        Result.success(Unit)
     }
 
     /**

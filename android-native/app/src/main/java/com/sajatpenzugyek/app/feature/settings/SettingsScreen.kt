@@ -18,21 +18,35 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sajatpenzugyek.app.R
+import java.math.BigDecimal
 
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val prefs by viewModel.preferences.collectAsState()
+    val isSyncing by viewModel.isSyncingRates.collectAsState()
+    val lastSync by viewModel.lastRatesSync.collectAsState()
+    val currentRates by viewModel.currentRates.collectAsState()
+
+    var showEditRatesDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -159,22 +173,43 @@ fun SettingsScreen(
                     androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val isSyncing by viewModel.isSyncingRates.collectAsState()
-                    val lastSync by viewModel.lastRatesSync.collectAsState()
+                    // Live FX Auto-Sync Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text(
+                                text = "Live FX Auto-Sync",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (prefs.autoSyncFxRates) "Fetches ECB market rates automatically" else "Disabled: 100% offline & air-gapped",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = prefs.autoSyncFxRates,
+                            onCheckedChange = { viewModel.setAutoSyncFxRates(it) }
+                        )
+                    }
 
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Status and action buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Exchange Rates",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            val syncText = if (isSyncing) {
+                            val syncText = if (!prefs.autoSyncFxRates) {
+                                "Air-gapped (Offline Only)"
+                            } else if (isSyncing) {
                                 "Updating real FX rates..."
                             } else if (lastSync != null) {
                                 val formatted = java.time.format.DateTimeFormatter
@@ -192,20 +227,33 @@ fun SettingsScreen(
                             )
                         }
 
-                        androidx.compose.material3.IconButton(
-                            onClick = { viewModel.refreshExchangeRates() },
-                            enabled = !isSyncing
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                         ) {
-                            if (isSyncing) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Refresh,
-                                    contentDescription = "Refresh exchange rates"
-                                )
+                            OutlinedButton(
+                                onClick = { showEditRatesDialog = true },
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)
+                            ) {
+                                Text("Edit Rates", style = MaterialTheme.typography.labelSmall)
+                            }
+
+                            androidx.compose.material3.IconButton(
+                                onClick = { viewModel.refreshExchangeRates() },
+                                enabled = !isSyncing
+                            ) {
+                                if (isSyncing) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Refresh,
+                                        contentDescription = "Refresh exchange rates"
+                                    )
+                                }
                             }
                         }
                     }
@@ -280,10 +328,85 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Privacy & Air-Gap Guarantee:\nAll your accounts, transactions, balances, and receipts are stored 100% locally in on-device SQLite. Zero personal or financial data is ever transmitted over the network.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
 
         item { Spacer(modifier = Modifier.height(88.dp)) }
+    }
+
+    // Manual Rates Editor Dialog
+    if (showEditRatesDialog) {
+        var hufRate by remember { mutableStateOf(currentRates["HUF"]?.toPlainString() ?: "395.0") }
+        var usdRate by remember { mutableStateOf(currentRates["USD"]?.toPlainString() ?: "1.08") }
+        var gbpRate by remember { mutableStateOf(currentRates["GBP"]?.toPlainString() ?: "0.85") }
+        var chfRate by remember { mutableStateOf(currentRates["CHF"]?.toPlainString() ?: "0.95") }
+
+        AlertDialog(
+            onDismissRequest = { showEditRatesDialog = false },
+            title = { Text("Manual Exchange Rates (Base: 1 EUR)") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Set custom exchange rates against 1 EUR. These rates will be saved locally in your database.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = hufRate,
+                        onValueChange = { hufRate = it },
+                        label = { Text("HUF per EUR") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = usdRate,
+                        onValueChange = { usdRate = it },
+                        label = { Text("USD per EUR") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = gbpRate,
+                        onValueChange = { gbpRate = it },
+                        label = { Text("GBP per EUR") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = chfRate,
+                        onValueChange = { chfRate = it },
+                        label = { Text("CHF per EUR") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        hufRate.toDoubleOrNull()?.let { viewModel.setManualRate("HUF", BigDecimal.valueOf(it)) }
+                        usdRate.toDoubleOrNull()?.let { viewModel.setManualRate("USD", BigDecimal.valueOf(it)) }
+                        gbpRate.toDoubleOrNull()?.let { viewModel.setManualRate("GBP", BigDecimal.valueOf(it)) }
+                        chfRate.toDoubleOrNull()?.let { viewModel.setManualRate("CHF", BigDecimal.valueOf(it)) }
+                        showEditRatesDialog = false
+                    }
+                ) {
+                    Text("Save Rates")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showEditRatesDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

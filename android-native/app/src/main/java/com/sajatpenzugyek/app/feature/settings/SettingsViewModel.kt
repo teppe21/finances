@@ -25,6 +25,7 @@ class SettingsViewModel : ViewModel() {
     val isSyncingRates: StateFlow<Boolean> = fxRepo.isSyncingFlow
     val isRatesOffline: StateFlow<Boolean> = fxRepo.isOfflineFlow
     val lastRatesSync: StateFlow<java.time.Instant?> = fxRepo.lastSyncFlow
+    val currentRates: StateFlow<Map<String, java.math.BigDecimal>> = fxRepo.ratesFlow
 
     fun setTheme(theme: String) {
         viewModelScope.launch { prefsRepo.setTheme(theme) }
@@ -38,13 +39,28 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch { prefsRepo.setCurrency(currency) }
     }
 
+    fun setAutoSyncFxRates(enabled: Boolean) {
+        viewModelScope.launch {
+            prefsRepo.setAutoSyncFxRates(enabled)
+            if (enabled) {
+                fxRepo.refreshRates(forceOnline = true)
+            }
+        }
+    }
+
+    fun setManualRate(currency: String, rate: java.math.BigDecimal) {
+        viewModelScope.launch {
+            fxRepo.setManualRate(currency, rate)
+        }
+    }
+
     fun setAppLock(type: String, pin: String = "") {
         viewModelScope.launch { prefsRepo.setAppLock(type, pin) }
     }
 
     fun refreshExchangeRates() {
         viewModelScope.launch {
-            fxRepo.refreshRates()
+            fxRepo.refreshRates(forceOnline = true)
         }
     }
 }

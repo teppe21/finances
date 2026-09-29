@@ -17,7 +17,8 @@ data class UserPreferences(
     val appLockType: String = "off",
     val pinHash: String = "",
     val autoImportNotifications: Boolean = true,
-    val autoCategorizeReceipts: Boolean = true
+    val autoCategorizeReceipts: Boolean = true,
+    val autoSyncFxRates: Boolean = true
 )
 
 class UserPreferencesRepository(private val context: Context) {
@@ -30,6 +31,7 @@ class UserPreferencesRepository(private val context: Context) {
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val AUTO_IMPORT_NOTIFS = booleanPreferencesKey("auto_import_notifs")
         val AUTO_CAT_RECEIPTS = booleanPreferencesKey("auto_cat_receipts")
+        val AUTO_SYNC_FX_RATES = booleanPreferencesKey("auto_sync_fx_rates")
     }
 
     val preferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -40,7 +42,8 @@ class UserPreferencesRepository(private val context: Context) {
             appLockType = prefs[Keys.APP_LOCK_TYPE] ?: "off",
             pinHash = prefs[Keys.PIN_HASH] ?: "",
             autoImportNotifications = prefs[Keys.AUTO_IMPORT_NOTIFS] ?: true,
-            autoCategorizeReceipts = prefs[Keys.AUTO_CAT_RECEIPTS] ?: true
+            autoCategorizeReceipts = prefs[Keys.AUTO_CAT_RECEIPTS] ?: true,
+            autoSyncFxRates = prefs[Keys.AUTO_SYNC_FX_RATES] ?: true
         )
     }
 
@@ -54,6 +57,10 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setCurrency(currency: String) {
         context.dataStore.edit { it[Keys.CURRENCY] = currency }
+    }
+
+    suspend fun setAutoSyncFxRates(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_SYNC_FX_RATES] = enabled }
     }
 
     suspend fun setAppLock(type: String, pinHash: String = "") {

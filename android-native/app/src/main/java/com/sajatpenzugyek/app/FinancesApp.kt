@@ -64,7 +64,10 @@ class FinancesApp : Application() {
         notificationRepository = NotificationRepository(database.notificationDao())
         receiptRepository = ReceiptRepository(database.receiptDao())
         preferencesRepository = UserPreferencesRepository(this)
-        exchangeRateRepository = com.sajatpenzugyek.app.data.fx.ExchangeRateRepository(database.exchangeRateDao())
+        exchangeRateRepository = com.sajatpenzugyek.app.data.fx.ExchangeRateRepository(
+            dao = database.exchangeRateDao(),
+            prefsRepo = preferencesRepository
+        )
 
         calculateStatsUseCase = CalculateFinancialStatsUseCase()
         categorizeUseCase = CategorizeTransactionUseCase()

@@ -212,4 +212,19 @@ class CurrencyConversionTest {
         assertEquals(5000L, statsEur.expenseMinor)
         assertEquals(15000L, statsEur.balanceMinor)
     }
+
+    @Test
+    fun testManualRateCalculationAndOverride() {
+        val customRates = mapOf(
+            "EUR" to BigDecimal.ONE,
+            "HUF" to BigDecimal("420.0"),
+            "USD" to BigDecimal("1.10")
+        )
+
+        val rateHuf = CurrencyConverter.calculateCrossRate("EUR", "HUF", "EUR", customRates)
+        assertEquals(420.0, rateHuf!!.toDouble(), 0.001)
+
+        val convertedHuf = CurrencyConverter.convert(1000L, "EUR", "HUF", rateHuf)
+        assertEquals(420000L, convertedHuf) // 10.00 EUR * 420 = 4200 HUF (420000 minor)
+    }
 }
