@@ -9,17 +9,17 @@
 [![ML Kit OCR](https://img.shields.io/badge/Google%20ML%20Kit-On--Device%20OCR-34A853.svg)](https://developers.google.com/ml-kit)
 [![CameraX](https://img.shields.io/badge/CameraX-1.3.2-EA4335.svg)](https://developer.android.com/training/camerax)
 [![CI Build](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF.svg?logo=github-actions&logoColor=white)](https://github.com/teppe21/finances)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20First-000000.svg)](docs/PRIVACY.md)
+[![Privacy](https://img.shields.io/badge/Privacy-Offline%20First%20%7C%20No%20Telemetry-000000.svg)](docs/PRIVACY.md)
 
-A privacy-focused, zero-telemetry, 100% offline-first personal finance application for Android.
+A privacy-focused, offline-first personal finance application for Android, built natively in Kotlin and Jetpack Compose.
 
-Built with native Kotlin and Jetpack Compose, **Finances** combines **real-time on-device bank notification tracking** (Revolut, OTP, Erste George, MBH, Wise) and **neural on-device receipt OCR** with an ACID-compliant Room SQLite database. No cloud logins, no financial tracking telemetry, and no subscription paywalls.
+Most personal finance apps suffer from one of two extremes: either they require tedious manual entry for every receipt, or they demand full access to bank account credentials via cloud aggregators. **Finances** explores a practical middle ground: leveraging native Android platform capabilities (real-time notification listening and on-device neural OCR) to automate logging at the device level, with zero tracking SDKs, no cloud servers, and no subscription paywalls.
 
 ---
 
-## 📱 Sideload APK & Play Store Bundle
+## 📱 Quick Download & Install
 
-- **Direct Install APK:** [`finances-native.apk`](finances-native.apk) in the repository root (~52.7 MB, includes offline ML Kit model).
+- **Direct Install APK:** [`finances-native.apk`](finances-native.apk) in the repository root (~52.7 MB, self-contained with offline ML Kit model).
 - **Google Play Store Bundle:** `android-native/app/build/outputs/bundle/release/app-release.aab` (~29.8 MB).
 - **Step-by-step Sideloading Guide:** See [NATIVE_APP_GUIDE.md](NATIVE_APP_GUIDE.md).
 
@@ -28,26 +28,41 @@ Built with native Kotlin and Jetpack Compose, **Finances** combines **real-time 
 ## 💡 Origin & Evolution
 
 > **Project History Note:**
-> This repository originally started as an experimental web-based personal finance dashboard (`/src`) built with React and Tailwind CSS to design the domain model and evaluate transaction ingestion flows.
+> This repository originally started as an experimental web-based dashboard (`/src`) using React and Tailwind CSS to model transaction schemas, duplicate detection, and categorization rules.
 >
-> While the web prototype was great for desktop bookkeeping, it could not solve mobile friction: manual receipt logging and lack of real-time purchase detection. After experimenting with hybrid frameworks (which proved battery-intensive and unreliable for background services), the entire application was rebuilt from scratch as a **pure native Android app** (`/android-native`) in Kotlin and Jetpack Compose.
+> While the web prototype was useful for testing business logic, desktop bookkeeping cannot solve real-world mobile friction. Hybrid frameworks were initially explored, but proved power-hungry and unsuited for background Android services. The application was therefore rebuilt as a **100% native Android application** (`/android-native`) using Kotlin, Jetpack Compose, Room SQLite, CameraX, and Android system services.
 >
 > Both codebases remain in this repository:
 > - **`android-native/`**: The primary, production-grade native Android app (`com.teppe21.finances`).
-> - **`/` & `src/`**: The original web dashboard prototype, preserved as a historical reference.
+> - **`/` & `src/`**: The original web prototype, preserved for reference.
 
 ---
 
-## 🎯 Architectural Highlights
+## 🛠️ Core Engineering Highlights
 
-1. **Air-Gapped Core Financials:** All accounts, transactions, balances, and receipts live strictly in on-device SQLite. Zero financial data is ever transmitted to remote servers.
-2. **Zero Fake Money on Clean Installs:** New installs start with exact 0 balances across accounts. Representative demo data is isolated to an explicit, opt-in "Load Sample Data" action in Settings.
-3. **Multi-Currency & Real FX Conversions:** Original transaction amounts and currencies are preserved permanently. Display currencies convert dynamically using real European Central Bank (ECB) rates with offline SQLite caching and customizable manual rates.
-4. **Real-Time Bank Ingestion:** An Android `NotificationListenerService` captures transaction notifications from supported banking apps (Revolut, OTP, Erste, MBH, Wise) in memory.
-5. **Multi-Tier Account Matching:** Distinguishes match confidence across **HIGH** (explicit user mapping or exact institution match), **MEDIUM** (fuzzy substring match), and **LOW** (held as pending for user review, never silently misassigned).
-6. **$O(1)$ Indexed Deduplication:** Constant-time duplicate checking via indexed Room lookups (`findByFingerprint`, `findByExternalId`, `findPossibleDuplicates`) over a $\pm 2$-day window.
-7. **On-Device Neural Receipt OCR:** CameraX live viewfinder coupled with Google ML Kit On-Device Text Recognition; Hungarian and European tax receipts are parsed locally without uploading images.
-8. **Android 16 (API 36) Compliance:** Built with `targetSdk = 36`, `compileSdk = 36`, Android Gradle Plugin 8.7.2, and structured Android Auto Backup rules (`data_extraction_rules.xml`).
+### 1. On-Device Automation (Zero Cloud Ingestion)
+- **Push Notification Ingestion:** An Android `NotificationListenerService` captures transaction notifications in volatile memory from supported banking apps (Revolut, OTP Bank, Erste George, MBH Bank, Wise, and standard transaction alerts).
+- **2FA & OTP Security Shield:** Any notification containing one-time passwords, SMS authentication codes, or login verification tokens is filtered and discarded immediately. Raw notification text is never persisted.
+- **On-Device Receipt OCR:** Integrates CameraX with Google ML Kit's on-device neural text recognition. Hungarian and European tax receipts (merchants, totals, VAT, payment methods) are parsed locally on the device's CPU/NPU without sending image data to external APIs.
+
+### 2. Reliable Ingestion Pipeline & Safe Account Matching
+- **Confidence-Tier Matching:**
+  - **HIGH:** User-assigned bank mappings or exact institution matches post directly to the target account.
+  - **MEDIUM:** Substring or currency-inferred matches are flagged as `Pending Review`.
+  - **LOW / Unmatched:** Transactions from unrecognized banks are held in `NEEDS_REVIEW` with an unassigned account. **They never silently corrupt existing account balances.**
+- **$O(1)$ Indexed Deduplication:** Replaced in-memory full-table scans with Room composite indices (`amountMinor, currency, date`) and deterministic SHA-256 fingerprint lookups (`findByFingerprint`, `findByExternalId`), providing instant deduplication over a sliding $\pm 2$-day window.
+
+### 3. Financial Precision & Multi-Currency Engine
+- **Integer Minor-Unit Arithmetic:** All transaction values are stored as 64-bit integer minor units (e.g. HUF cents/fillér, EUR cents), eliminating IEEE 754 floating-point rounding inaccuracies.
+- **True Multi-Currency Support:** Original currency codes and transaction amounts are permanently preserved in the database. When switching display currencies (HUF, EUR, USD, GBP, CHF), values are converted dynamically using European Central Bank (ECB) reference rates.
+- **Offline Rate Caching:** Exchange rates are stored in Room (`exchange_rates`) with bundled fallbacks and support for user-defined custom rates. The app functions fully offline.
+
+### 4. Transparent Security & Privacy Posture
+- **Private App Storage:** Financial data resides exclusively in `/data/data/com.teppe21.finances/databases/finances.db`, protected by Android's Linux UID process isolation and hardware-backed File-Based Encryption (FBE).
+- **No Overstated Claims:** The database relies on Android OS disk-level encryption rather than an extra SQLCipher layer, which is clearly documented to ensure technical accuracy.
+- **Minimal, Anonymous Network Footprint:** The app uses network access for exactly one optional purpose: fetching daily public FX reference rates from the Frankfurter API (an anonymous, parameter-free GET request). This can be completely disabled in Settings.
+- **Zero Third-Party Telemetry:** No analytics libraries, no crash aggregators, no advertising SDKs, and no tracking identifiers.
+- **Biometric & PIN App Lock:** Optional biometric challenge via `androidx.biometric:BiometricPrompt` backed by the device's Secure Element.
 
 ---
 
@@ -66,7 +81,7 @@ Built with native Kotlin and Jetpack Compose, **Finances** combines **real-time 
        │  Raw Notification     │  OCR Text             │  Raw Rows            │
        ▼                       ▼                       ▼                      │
 ┌──────────────┐        ┌──────────────┐        ┌──────────────┐              │
-│ Revolut/OTP  │        │ Hungarian    │        │ Multi-format │              │
+│ Revolut/OTP  │        │ European/HU  │        │ Multi-format │              │
 │ Bank Parsers │        │ Receipt      │        │ CSV Parser   │              │
 │ (Regex & NLP)│        │ Semantic NLP │        │              │              │
 └──────┬───────┘        └──────┬───────┘        └──────┬───────┘              │
@@ -80,10 +95,11 @@ Built with native Kotlin and Jetpack Compose, **Finances** combines **real-time 
                                │
                  ┌─────────────┴─────────────┐
                  │ 1. Diacritic Normalizer   │
-                 │ 2. SHA-256 Fingerprint    │
+                 │ 2. Deterministic Hash     │
                  │ 3. Indexed Dedup (Room)   │
                  │ 4. Keyword Rule Engine    │
                  │ 5. Transfer Auto-Detector │
+                 │ 6. Confidence Tier Filter │
                  └─────────────┬─────────────┘
                                │
                                ▼
@@ -98,39 +114,20 @@ Built with native Kotlin and Jetpack Compose, **Finances** combines **real-time 
                  │  - Donut Spending Chart   │
                  │  - Dynamic Rule Manager   │
                  │  - Multi-Currency Display │
-                 │  - 5-Tab Navigation       │
+                 │  - Edge-to-Edge Layout    │
                  └───────────────────────────┘
 ```
 
 ---
 
-## ⚡ Feature Deep-Dive
+## ⚡ Key Features
 
-### 1. Bank Push Notification Automation
-- **Supported Banks:** Revolut, OTP Bank (SmartBank & MobilBank), Erste Bank (George), MBH Bank, Wise, and generic Hungarian/European transaction formats.
-- **Privacy & 2FA Discard:** Security verification codes, OTP tokens, SMS logins, and personal chat messages are immediately filtered and dropped in memory.
-- **Custom Bank Mapping:** Users can map specific banks to their accounts in *Settings $\rightarrow$ Bank Notification Automation*.
-- **Confidence Tiers:** High confidence matches automatically associate with the account; low/unknown matches are flagged as `Pending: Needs Account Review` to prevent balance contamination.
-
-### 2. On-Device Receipt OCR (CameraX + ML Kit)
-- **Live Viewfinder:** Integrated camera guide with flash toggle and gallery picker.
-- **Hungarian Semantic Parser:** Automatically detects merchant tax headers, total amounts (`FIZETENDŐ`, `ÖSSZESEN`, `VÉGÖSSZEG`), VAT percentages, and payment methods (`KÉSZPÉNZ`, `BANKKÁRTYA`).
-- **Cash Wallet Routing:** Cash payments automatically debit the local Cash Wallet balance.
-
-### 3. Multi-Currency Support & Real FX Engine
-- Seamlessly toggle your primary display currency across **HUF, EUR, USD, GBP, CHF**.
-- Real-time exchange rate conversions powered by European Central Bank reference rates.
-- Full offline caching in SQLite table `exchange_rates`, with fallback rates and user-customizable manual rate overrides.
-
-### 4. Interactive Analytics & Hardware-Accelerated Charts
-- **Compose Canvas Donut Chart:** Smooth hardware-accelerated donut visualization with touch-to-inspect category breakdowns.
-- **Dynamic Period Engine:** Filter by *This Month, Last Month, 3 Months, 6 Months, This Year, Last Year*, or a *Custom Date Range*.
-- **Merchant Leaderboard:** Automatic calculation of top spending destinations.
-
-### 5. Categorization & Rule Manager
-- User-defined and built-in rules for categories (`Food & Groceries`, `Dining`, `Transport`, `Subscriptions`, `Housing`, etc.).
-- Keyword chips management with user priority overriding default system rules.
-- Safe deletion barrier: Prevents orphan records by requiring reassignment before removing an in-use category.
+- **Clean Installation State:** Fresh installs initialize with verified 0 balances across default accounts (`Cash Wallet`, `OTP Current Account`, `Revolut`, `Savings`). No fake balances or generated dummy data are seeded automatically.
+- **Isolated Demo & Portfolio Mode:** Users and technical interviewers can populate representative sample balances on demand via **Settings $\rightarrow$ Demo & Portfolio Data $\rightarrow$ Load Demo**, and reset back to clean 0 balances via **Clear Demo**.
+- **Interactive Analytics:** Hardware-accelerated Compose Canvas donut chart with touch-to-inspect category breakdowns, spending trends, and top merchant leaderboards over customizable time windows.
+- **Smart Categorization & User Rules:** Automated keyword categorization with custom user rules taking priority over built-in heuristics. Categories can be dynamically added or safely reassigned.
+- **CSV Statement Importer:** Supports standard exports from OTP Bank, Revolut, Erste, MBH, and Wise with automatic character set detection (UTF-8, UTF-8 BOM, ISO-8859-2) and European comma formatting.
+- **Strict Android Auto Backup Rules:** Configured via `data_extraction_rules.xml` and `backup_rules.xml` to include user databases and settings while excluding temporary cache and receipt images.
 
 ---
 
@@ -159,9 +156,9 @@ finances/
 │   │   │   ├── native/              # BankNotificationListenerService & Parsers
 │   │   │   ├── FinancesApp.kt       # Application class (Locale configuration)
 │   │   │   └── MainActivity.kt      # Edge-to-edge Compose host activity
-│   │   ├── src/test/java/           # Comprehensive Unit & Regression Test Suite
-│   │   ├── schemas/                 # Room JSON Schema Exports (v3)
-│   │   └── build.gradle.kts         # Target SDK 36, Compile SDK 36, Release Signing
+│   │   ├── src/test/java/           # Comprehensive Unit & Regression Test Suite (30 tests)
+│   │   ├── schemas/                 # Tracked Room JSON Schema Exports (v3)
+│   │   └── build.gradle.kts         # Target SDK 36, Compile SDK 36, Strict Release Signing
 │   ├── gradlew                      # Gradle Wrapper script (Linux/macOS)
 │   ├── gradlew.bat                  # Gradle Wrapper script (Windows)
 │   └── settings.gradle.kts
@@ -186,19 +183,20 @@ finances/
 
 ---
 
-## 🛠️ Building & Running
+## 🛠️ Building & Testing
 
 ### Requirements
 - **JDK 17** (e.g. Eclipse Temurin 17)
 - **Android SDK 36** (Installed platform: `android-36`; Build Tools: `36.0.0`)
+- **Gradle 8.9** & **Android Gradle Plugin 8.7.2**
 
-### 1. Run All Unit Tests
+### 1. Run Unit Tests (30 tests, JVM execution)
 ```bash
 cd android-native
 ./gradlew testDebugUnitTest
 ```
 
-### 2. Build Debug APK (Local Dev - No Keystore Required)
+### 2. Build Debug APK (No keystore required)
 ```bash
 cd android-native
 ./gradlew assembleDebug
@@ -206,7 +204,7 @@ cd android-native
 ```
 
 ### 3. Build Signed Release APK & App Bundle (AAB)
-> Requires configuring upload keystore credentials via environment variables or `local.properties`. See [docs/RELEASE.md](docs/RELEASE.md).
+Release tasks strictly require signing credentials via environment variables or `local.properties` (never falling back to debug keys):
 ```bash
 cd android-native
 ./gradlew assembleRelease bundleRelease
@@ -215,6 +213,8 @@ Outputs:
 - **APK**: `android-native/app/build/outputs/apk/release/app-release.apk`
 - **AAB**: `android-native/app/build/outputs/bundle/release/app-release.aab`
 
+For step-by-step keystore generation, verification with `apksigner`, and Google Play Console release instructions, refer to [docs/RELEASE.md](docs/RELEASE.md).
+
 ---
 
 ## 📖 In-Depth Documentation
@@ -222,7 +222,7 @@ Outputs:
 - [System Architecture](docs/ARCHITECTURE.md)
 - [Security & Threat Model](docs/SECURITY.md)
 - [Bank Notification Integration](docs/BANK_INTEGRATION.md)
-- [Room Database Schema](docs/DATA_MODEL.md)
+- [Room Database Schema & Migrations](docs/DATA_MODEL.md)
 - [Release & Signing Guide](docs/RELEASE.md)
 - [Testing Strategy & CI](docs/TESTING.md)
 - [Privacy Policy & Backup Rules](docs/PRIVACY.md)
@@ -232,4 +232,4 @@ Outputs:
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE) — free to use, inspect, and build upon.
+This project is licensed under the [MIT License](LICENSE) — free to inspect, use, and build upon.
