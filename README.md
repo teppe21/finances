@@ -2,6 +2,7 @@
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Android Target](https://img.shields.io/badge/Target%20SDK-36%20(Android%2016)-34A853.svg?logo=android&logoColor=white)](https://developer.android.com)
+[![Compile SDK](https://img.shields.io/badge/Compile%20SDK-36-34A853.svg?logo=android&logoColor=white)](https://developer.android.com)
 [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-2024.02.01-4285F4.svg?logo=android&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Material 3](https://img.shields.io/badge/Material%203-M3-6750A4.svg)](https://m3.material.io)
 [![Room SQLite](https://img.shields.io/badge/Room%20DB-2.6.1%20(v3)-4285F4.svg)](https://developer.android.com/training/data-storage/room)
@@ -46,7 +47,7 @@ Built with native Kotlin and Jetpack Compose, **Finances** combines **real-time 
 5. **Multi-Tier Account Matching:** Distinguishes match confidence across **HIGH** (explicit user mapping or exact institution match), **MEDIUM** (fuzzy substring match), and **LOW** (held as pending for user review, never silently misassigned).
 6. **$O(1)$ Indexed Deduplication:** Constant-time duplicate checking via indexed Room lookups (`findByFingerprint`, `findByExternalId`, `findPossibleDuplicates`) over a $\pm 2$-day window.
 7. **On-Device Neural Receipt OCR:** CameraX live viewfinder coupled with Google ML Kit On-Device Text Recognition; Hungarian and European tax receipts are parsed locally without uploading images.
-8. **Android 16 (API 36) Compliance:** Built with `targetSdk = 36`, `compileSdk = 35`, and structured Android Auto Backup rules (`data_extraction_rules.xml`).
+8. **Android 16 (API 36) Compliance:** Built with `targetSdk = 36`, `compileSdk = 36`, Android Gradle Plugin 8.7.2, and structured Android Auto Backup rules (`data_extraction_rules.xml`).
 
 ---
 
@@ -160,13 +161,14 @@ finances/
 │   │   │   └── MainActivity.kt      # Edge-to-edge Compose host activity
 │   │   ├── src/test/java/           # Comprehensive Unit & Regression Test Suite
 │   │   ├── schemas/                 # Room JSON Schema Exports (v3)
-│   │   └── build.gradle.kts         # Target SDK 36, Compile SDK 35, Release Signing
+│   │   └── build.gradle.kts         # Target SDK 36, Compile SDK 36, Release Signing
 │   ├── gradlew                      # Gradle Wrapper script (Linux/macOS)
 │   ├── gradlew.bat                  # Gradle Wrapper script (Windows)
 │   └── settings.gradle.kts
 │
 ├── .github/workflows/
-│   └── android.yml                  # Automated CI testing & artifact packaging
+│   ├── android.yml                  # PR & Main Code Verification CI (test, lint, assembleDebug)
+│   └── release.yml                  # Protected Release Signing Workflow (bundleRelease)
 │
 ├── docs/                            # In-Depth Documentation Suite
 │   ├── ARCHITECTURE.md              # Clean architecture & ingestion pipeline
@@ -188,15 +190,23 @@ finances/
 
 ### Requirements
 - **JDK 17** (e.g. Eclipse Temurin 17)
-- **Android SDK 35+** (Installed platforms: `android-35`, `android-36`; Build Tools: `35.0.1`, `36.0.0`)
+- **Android SDK 36** (Installed platform: `android-36`; Build Tools: `36.0.0`)
 
 ### 1. Run All Unit Tests
 ```bash
 cd android-native
-./gradlew test
+./gradlew testDebugUnitTest
 ```
 
-### 2. Build Release APK & App Bundle (AAB)
+### 2. Build Debug APK (Local Dev - No Keystore Required)
+```bash
+cd android-native
+./gradlew assembleDebug
+# Output: android-native/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 3. Build Signed Release APK & App Bundle (AAB)
+> Requires configuring upload keystore credentials via environment variables or `local.properties`. See [docs/RELEASE.md](docs/RELEASE.md).
 ```bash
 cd android-native
 ./gradlew assembleRelease bundleRelease

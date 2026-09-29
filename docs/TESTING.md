@@ -46,7 +46,8 @@ Automated testing is configured in `.github/workflows/android.yml`:
 - **Pipeline Stages**:
   1. Checkout repository
   2. Setup JDK 17 with Gradle dependency caching
-  3. Execute `./gradlew test --stacktrace`
-  4. Compile `./gradlew assembleDebug`
-  5. Compile `./gradlew bundleRelease assembleRelease`
-  6. Upload test reports and release artifacts
+  3. Execute `./gradlew testDebugUnitTest --stacktrace`
+  4. Run code quality validation `./gradlew lintDebug --stacktrace`
+  5. Compile `./gradlew assembleDebug`
+  6. Upload test reports and debug APK artifacts
+  7. Dedicated release workflow (`release.yml`) handles signed `bundleRelease` upon release dispatch.

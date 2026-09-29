@@ -77,6 +77,6 @@ The fully native (Kotlin + Jetpack Compose + Room + CameraX + ML Kit) Android ap
 | **Camera & Vision** | AndroidX CameraX 1.3.2 + Google ML Kit Text Recognition 16.0.0 |
 | **Background Automation** | `BankNotificationListenerService` (Coroutine IO Dispatcher) |
 | **Financial Math** | Strict 64-bit integer minor unit arithmetic (zero rounding error) |
-| **Target Platform** | Android 16 (API 36), Compile SDK 35, Min SDK 26 |
+| **Target Platform** | Android 16 (API 36), Compile SDK 36, Min SDK 26 |
 | **Automated Testing** | Comprehensive JUnit test suite (`ParsersTest`, `DatabaseAndMatchingTest`, etc.) |
-| **Build System** | Gradle 8.5, Android Gradle Plugin 8.2.2, JDK 17 |
+| **Build System** | Gradle 8.9, Android Gradle Plugin 8.7.2, JDK 17 |

@@ -312,11 +312,22 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.loadSampleData() },
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Load Sample Data")
+                        OutlinedButton(
+                            onClick = { viewModel.loadSampleData() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Load Demo")
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.clearSampleData() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Clear Demo")
+                        }
                     }
                 }
             }

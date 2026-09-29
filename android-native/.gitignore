@@ -10,4 +10,6 @@
 .cxx
 *.apk
 *.aab
+*.jks
+*.keystore
 output-metadata.json

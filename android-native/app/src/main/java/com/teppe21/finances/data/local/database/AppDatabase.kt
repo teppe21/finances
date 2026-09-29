@@ -186,3 +186,17 @@ suspend fun loadSampleData(db: AppDatabase) {
     )
     db.accountDao().insertAll(sampleAccounts)
 }
+
+/**
+ * Opt-in action to clear sample demo data and reset all account balances back to zero (clean install state).
+ */
+suspend fun clearSampleData(db: AppDatabase) {
+    val now = Instant.now()
+    val cleanAccounts = listOf(
+        AccountEntity("acc_cash", "Cash Wallet", "Wallet", AccountType.CASH, "HUF", 0L, 0L, true, now, now),
+        AccountEntity("acc_otp", "OTP Current Account", "OTP Bank", AccountType.BANK, "HUF", 0L, 0L, true, now, now),
+        AccountEntity("acc_revolut", "Revolut", "Revolut", AccountType.BANK, "HUF", 0L, 0L, true, now, now),
+        AccountEntity("acc_savings", "Savings", "Treasury", AccountType.SAVINGS, "HUF", 0L, 0L, true, now, now)
+    )
+    db.accountDao().insertAll(cleanAccounts)
+}

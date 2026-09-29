@@ -130,20 +130,37 @@ class BankNotificationListenerService : NotificationListenerService() {
             mappedAccount != null -> Pair(mappedAccount, AccountMatchTier.HIGH)
             exactInstAccount != null -> Pair(exactInstAccount, AccountMatchTier.HIGH)
             fuzzyAccount != null -> Pair(fuzzyAccount, AccountMatchTier.MEDIUM)
-            else -> Pair(accounts.firstOrNull(), AccountMatchTier.LOW)
+            else -> Pair(null, AccountMatchTier.LOW)
         }
 
-        val isLowConfidence = matchTier == AccountMatchTier.LOW
-        val accountId = matchedAccount?.id ?: ""
+        // If no account could be matched with confidence, hold the notification for review without mutating accounts/balances
+        if (matchedAccount == null || matchTier == AccountMatchTier.LOW) {
+            notifDao.insert(
+                NotificationEventEntity(
+                    id = eventId,
+                    packageName = raw.packageName,
+                    title = raw.title,
+                    text = raw.text,
+                    postedAt = raw.postedAt,
+                    sourceBank = parser.bankName,
+                    processed = false,
+                    parseStatus = NotificationParseStatus.NEEDS_REVIEW,
+                    transactionId = null,
+                    fingerprint = null
+                )
+            )
+            return
+        }
+
         val effectiveConfidence = when (matchTier) {
             AccountMatchTier.HIGH -> candidate.confidence
             AccountMatchTier.MEDIUM -> minOf(candidate.confidence, 0.80f)
             AccountMatchTier.LOW -> 0.40f
         }
-        val isPending = candidate.confidence < 0.90f || isLowConfidence
+        val isPending = candidate.confidence < 0.90f || matchTier == AccountMatchTier.MEDIUM
 
         val input = IngestionInput(
-            accountId = accountId,
+            accountId = matchedAccount.id,
             date = candidate.date,
             amountMinor = candidate.amountMinor,
             currency = candidate.currency,
@@ -154,7 +171,7 @@ class BankNotificationListenerService : NotificationListenerService() {
             source = com.teppe21.finances.domain.model.TransactionSource.NOTIFICATION,
             sourceAppPackage = raw.packageName,
             notificationEventId = eventId,
-            notes = if (isLowConfidence) "Needs Account Review (Bank: ${parser.bankName})" else null,
+            notes = if (isPending) "Needs Account Review (Bank: ${parser.bankName})" else null,
             confidence = effectiveConfidence,
             pending = isPending
         )
@@ -170,8 +187,8 @@ class BankNotificationListenerService : NotificationListenerService() {
                 text = raw.text,
                 postedAt = raw.postedAt,
                 sourceBank = parser.bankName,
-                processed = output.transaction != null && !isLowConfidence,
-                parseStatus = if (output.transaction != null && !isLowConfidence) NotificationParseStatus.PARSED else NotificationParseStatus.NEEDS_REVIEW,
+                processed = output.transaction != null,
+                parseStatus = if (output.transaction != null && !isPending) NotificationParseStatus.PARSED else NotificationParseStatus.NEEDS_REVIEW,
                 transactionId = output.transaction?.id,
                 fingerprint = output.transaction?.fingerprint
             )

@@ -26,3 +26,9 @@
 
 # DataStore Preferences
 -keepclassmembers class * extends androidx.datastore.preferences.core.Preferences { *; }
+
+# Native Services, Receivers & Converters
+-keep class com.teppe21.finances.native.notification.BankNotificationListenerService { *; }
+-keep class com.teppe21.finances.data.local.database.Converters { *; }
+-keep class com.teppe21.finances.MainActivity { *; }
+-keep class com.teppe21.finances.FinancesApp { *; }

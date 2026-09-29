@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.teppe21.finances"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.teppe21.finances"
@@ -66,15 +66,26 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            signingConfig = if (hasReleaseSigning) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
+            )
+        }
+    }
+
+    gradle.taskGraph.whenReady {
+        val hasReleaseBuildTask = allTasks.any { task ->
+            val name = task.name.lowercase()
+            (name.startsWith("assemble") || name.startsWith("bundle") || name.startsWith("package")) && name.contains("release")
+        }
+        if (hasReleaseBuildTask && !hasReleaseSigning) {
+            throw GradleException(
+                "Release signing is not configured. Set FINANCES_KEYSTORE_PATH, FINANCES_KEYSTORE_PASSWORD, FINANCES_KEY_ALIAS and FINANCES_KEY_PASSWORD."
             )
         }
     }

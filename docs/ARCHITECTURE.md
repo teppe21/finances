@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary & Design Vision
 
-**Finances** (`com.teppe21.finances`) is a production-grade, 100% native Android personal finance application built with modern Kotlin, Jetpack Compose, Material 3, and Room SQLite. It targets **Android 16 (API level 36)** with a `compileSdk` of 35 and `minSdk` of 26 (Android 8.0 Oreo).
+**Finances** (`com.teppe21.finances`) is a production-grade, 100% native Android personal finance application built with modern Kotlin, Jetpack Compose, Material 3, and Room SQLite. It targets **Android 16 (API level 36)** with a `compileSdk` of 36 and `minSdk` of 26 (Android 8.0 Oreo).
 
 The application eliminates the friction of manual expense bookkeeping through two real-time on-device automation channels:
 1. **Real-Time Bank Transaction Ingestion**: A background `NotificationListenerService` (`BankNotificationListenerService`) captures transaction notifications from major European and Hungarian banking apps (Revolut, OTP Bank, Erste George, MBH Bank, Wise, and generic banking templates) directly into the database.

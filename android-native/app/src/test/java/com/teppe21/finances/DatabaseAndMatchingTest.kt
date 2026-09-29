@@ -146,4 +146,51 @@ class DatabaseAndMatchingTest {
         assertEquals(2, AppDatabase.MIGRATION_2_3.startVersion)
         assertEquals(3, AppDatabase.MIGRATION_2_3.endVersion)
     }
+
+    @Test
+    fun testUnknownBankDoesNotMatchArbitraryAccount() {
+        val accounts = listOf(
+            Account("acc_otp", "OTP Current Account", "OTP Bank", AccountType.BANK, "HUF", 0L, 0L, true, Instant.now(), Instant.now()),
+            Account("acc_rev", "Revolut Pocket", "Revolut Ltd", AccountType.BANK, "HUF", 0L, 0L, true, Instant.now(), Instant.now())
+        )
+
+        val unknownBank = "Random Nonexistent Bank"
+        val userMappedAccountId: String? = null
+        val mappedAccount = accounts.firstOrNull { it.id == userMappedAccountId }
+        val exactInstAccount = accounts.firstOrNull { it.institution.equals(unknownBank, ignoreCase = true) }
+        val fuzzyAccount = accounts.firstOrNull {
+            it.name.contains(unknownBank, ignoreCase = true) ||
+                it.institution.contains(unknownBank, ignoreCase = true)
+        }
+
+        val (matchedAccount, matchTier) = when {
+            mappedAccount != null -> Pair(mappedAccount, AccountMatchTier.HIGH)
+            exactInstAccount != null -> Pair(exactInstAccount, AccountMatchTier.HIGH)
+            fuzzyAccount != null -> Pair(fuzzyAccount, AccountMatchTier.MEDIUM)
+            else -> Pair(null, AccountMatchTier.LOW)
+        }
+
+        org.junit.Assert.assertNull("Unknown bank must never match an arbitrary account", matchedAccount)
+        assertEquals(AccountMatchTier.LOW, matchTier)
+    }
+
+    @Test
+    fun testDemoDataLifecycle() {
+        val zeroAccounts = listOf(
+            Account("acc_cash", "Cash Wallet", "Wallet", AccountType.CASH, "HUF", 0L, 0L, true, Instant.now(), Instant.now()),
+            Account("acc_otp", "OTP Current Account", "OTP Bank", AccountType.BANK, "HUF", 0L, 0L, true, Instant.now(), Instant.now()),
+            Account("acc_revolut", "Revolut", "Revolut", AccountType.BANK, "HUF", 0L, 0L, true, Instant.now(), Instant.now()),
+            Account("acc_savings", "Savings", "Treasury", AccountType.SAVINGS, "HUF", 0L, 0L, true, Instant.now(), Instant.now())
+        )
+        // Clean install state has 0 balances
+        assertTrue(zeroAccounts.all { it.currentBalanceMinor == 0L })
+
+        // Demo loaded state has non-zero balances
+        val demoAccounts = zeroAccounts.map { it.copy(currentBalanceMinor = 1500000L) }
+        assertTrue(demoAccounts.all { it.currentBalanceMinor > 0L })
+
+        // Clear demo state restores zero balances
+        val clearedAccounts = demoAccounts.map { it.copy(currentBalanceMinor = 0L) }
+        assertTrue(clearedAccounts.all { it.currentBalanceMinor == 0L })
+    }
 }

@@ -69,5 +69,11 @@ class SettingsViewModel : ViewModel() {
             com.teppe21.finances.data.local.database.loadSampleData(app.database)
         }
     }
+
+    fun clearSampleData() {
+        viewModelScope.launch {
+            com.teppe21.finances.data.local.database.clearSampleData(app.database)
+        }
+    }
 }
 

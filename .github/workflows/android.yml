@@ -1,4 +1,4 @@
-name: Android CI & Release Build
+name: Android CI (Verification)
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-    name: Build & Test Native Android
+  verify:
+    name: Test & Build Debug
     runs-on: ubuntu-latest
 
     defaults:
@@ -30,13 +30,13 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Unit Tests
-        run: ./gradlew test --stacktrace
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Run Lint
+        run: ./gradlew lintDebug --stacktrace
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
-
-      - name: Build Release Bundle (AAB) & APK
-        run: ./gradlew bundleRelease assembleRelease --stacktrace
 
       - name: Upload Test Results
         if: always()
@@ -45,8 +45,8 @@ jobs:
           name: unit-test-results
           path: android-native/app/build/reports/tests/
 
-      - name: Upload Release Bundle
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-aab
-          path: android-native/app/build/outputs/bundle/release/app-release.aab
+          name: debug-apk
+          path: android-native/app/build/outputs/apk/debug/app-debug.apk

@@ -1,4 +1,4 @@
-﻿package com.teppe21.finances.feature.dashboard
+package com.teppe21.finances.feature.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -52,9 +52,10 @@ class DashboardViewModel : ViewModel() {
             fxRepo.convert(amountMinor, currency, targetCurrency, date) ?: amountMinor
         }
 
-        val stats = statsUseCase.execute(transactions, converter)
-        val trends = statsUseCase.calculateMonthlyTrends(transactions, converter = converter)
-        val breakdown = statsUseCase.calculateCategoryBreakdown(transactions, categories, converter = converter)
+        val confirmed = transactions.filter { !it.pending }
+        val stats = statsUseCase.execute(confirmed, converter)
+        val trends = statsUseCase.calculateMonthlyTrends(confirmed, converter = converter)
+        val breakdown = statsUseCase.calculateCategoryBreakdown(confirmed, categories, converter = converter)
         val recent = transactions.take(5)
         val recentConverted = recent.map { tx ->
             ConvertedTransaction(
