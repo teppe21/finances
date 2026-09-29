@@ -1,10 +1,18 @@
-# Data Model & SQLite Schema
+# Data Model & Room SQLite Schema
 
-This document details the database schema and entity models powering the local-first storage architecture.
+## 1. Overview & Room Architecture
+
+The application persistence layer is implemented via Android Jetpack Room (`AppDatabase`, version 3). The schema is formally exported to JSON schemas at:
+`android-native/app/schemas/com.teppe21.finances.data.local.database.AppDatabase/3.json`
+
+### Core Schema Principles:
+1. **Integer Minor Units**: All monetary values (`amountMinor`, `openingBalanceMinor`, `currentBalanceMinor`, `monthlyLimitMinor`, `taxMinor`) are stored as 64-bit integers (`Long`), representing the currency's smallest sub-unit (cents, fillérs).
+2. **Deterministic Fingerprints**: Transactions have a unique cryptographic fingerprint preventing duplicate entries.
+3. **Optimized B-Tree Indices**: Composite and single-column indices support constant-time deduplication and responsive dashboard rendering.
 
 ---
 
-## 1. Relational Schema Diagram
+## 2. Entity-Relationship Model
 
 ```mermaid
 erDiagram
@@ -12,9 +20,8 @@ erDiagram
     CATEGORIES ||--o{ TRANSACTIONS : categorizes
     CATEGORIES ||--o{ CATEGORY_RULES : defines
     CATEGORIES ||--o{ BUDGETS : targets
-    RECEIPT_SCANS ||--o| TRANSACTIONS : generates
+    RECEIPTS ||--o| TRANSACTIONS : generates
     NOTIFICATION_EVENTS ||--o| TRANSACTIONS : generates
-    NOTIFICATION_SOURCES ||--o{ NOTIFICATION_EVENTS : filters
 
     ACCOUNTS {
         string id PK
@@ -22,37 +29,38 @@ erDiagram
         string institution
         string type
         string currency
-        int openingBalanceMinor
-        int isActive
-        string createdAt
-        string updatedAt
+        int64 openingBalanceMinor
+        int64 currentBalanceMinor
+        boolean isActive
+        int64 createdAt
+        int64 updatedAt
     }
 
     TRANSACTIONS {
         string id PK
-        string accountId FK
+        string accountId
         string date
-        string valueDate
-        int amountMinor
+        int64 valueDate
+        int64 amountMinor
         string currency
         string direction
         string description
         string merchant
-        string categoryId FK
+        string categoryId
         string source
         string sourceAppPackage
         string externalId
-        string fingerprint
-        string receiptId FK
-        string notificationEventId FK
+        string fingerprint UK
+        string receiptId
+        string notificationEventId
         string recurringRuleId
         string transferId
         string notes
-        int pending
-        real confidence
-        string importedAt
-        string createdAt
-        string updatedAt
+        boolean pending
+        float confidence
+        int64 importedAt
+        int64 createdAt
+        int64 updatedAt
     }
 
     CATEGORIES {
@@ -60,130 +68,101 @@ erDiagram
         string name
         string icon
         string color
-        int isIncome
-        int isDefault
-        string createdAt
-        string updatedAt
+        boolean isIncome
+        boolean isSystem
+        int64 createdAt
+        int64 updatedAt
     }
 
     CATEGORY_RULES {
         string id PK
-        string categoryId FK
-        string pattern
+        string categoryId
+        string keyword
         string matchType
         int priority
-        int isActive
-        string createdAt
-    }
-
-    RECEIPT_SCANS {
-        string id PK
-        string imageUri
-        string scannedAt
-        string merchant
-        string date
-        int totalMinor
-        int subtotalMinor
-        int taxMinor
-        string currency
-        string paymentMethod
-        string itemsJson
-        int rawOcrAvailable
-        string rawOcrText
-        real confidence
-        int processedLocally
-        string transactionId
-    }
-
-    NOTIFICATION_SOURCES {
-        string packageName PK
-        string displayName
-        int enabled
-        string bankProfileId
-        string createdAt
-        string updatedAt
+        boolean isActive
+        int64 createdAt
     }
 
     NOTIFICATION_EVENTS {
         string id PK
         string packageName
-        string applicationLabel
         string title
         string text
-        string bigText
-        string subText
-        string postedAt
-        string notificationKey
-        string sourceBankProfile
-        int processed
+        int64 postedAt
+        string sourceBank
+        boolean processed
         string parseStatus
         string transactionId
         string fingerprint
-        string failureReason
+    }
+
+    RECEIPTS {
+        string id PK
+        string photoUri
+        int64 scannedAt
+        int64 totalMinor
+        string currency
+        int64 taxMinor
+        string merchant
+        string paymentMethod
+        float confidence
+        string rawOcrText
+        boolean isProcessed
+        string transactionId
     }
 
     BUDGETS {
         string id PK
-        string categoryId FK
-        int amountMinor
+        string categoryId
+        int64 monthlyLimitMinor
+        string currency
         string period
-        string startDate
-        string endDate
-        string notes
+        int64 createdAt
+        int64 updatedAt
     }
 
-    SAVED_PERIODS {
-        string id PK
-        string periodKey
-        string name
-        string savedAt
-        int transactionCount
-        int totalIncomeMinor
-        int totalExpenseMinor
-        int balanceMinor
-        string dataJson
+    EXCHANGE_RATES {
+        string baseCurrency PK
+        string targetCurrency PK
+        real rate
+        string rateDate PK
+        int64 timestamp
+        string provider
     }
 ```
 
 ---
 
-## 2. Integer Minor Currency Units
-All monetary amounts are represented as 64-bit integer minor currency units (`amountMinor`):
-- **HUF**: 1 HUF = 100 minor units (fillér). E.g. `14 500 HUF` is stored as `1450000`.
-- **EUR**: 1 EUR = 100 minor units (cents). E.g. `12.50 EUR` is stored as `1250`.
-- **USD**: 1 USD = 100 minor units (cents). E.g. `99.00 USD` is stored as `9900`.
+## 3. Database Indices & Performance Optimization
 
-This integer arithmetic model prevents floating-point cumulative rounding errors common in JavaScript and financial spreadsheets.
-
----
-
-## 3. Account Entity & The Cash Model
-Cash is a **first-class account** (`type: 'cash'`) rather than an afterthought:
-- Receipt scans with detected cash payment (`KÉSZPÉNZ`) automatically map to the Cash account.
-- ATM cash withdrawals from bank accounts create a transfer (`acc_otp` -> `acc_cash`) preserving net worth without double-counting expenses.
+### `transactions` Table
+| Index Name | Columns | Type | Purpose |
+|---|---|---|---|
+| `index_transactions_fingerprint` | `fingerprint` | UNIQUE | Deterministic idempotency check ($O(1)$) |
+| `index_transactions_externalId` | `externalId` | Non-unique | Bank transaction reference matching ($O(\log N)$) |
+| `index_transactions_amount_curr_date` | `amountMinor, currency, date` | Composite | Fast fuzzy duplicate matching across $\pm 2$ day window |
+| `index_transactions_accountId` | `accountId` | Non-unique | Account balance calculation and filtering |
+| `index_transactions_date` | `date` | Non-unique | Chronological range queries and analytics |
+| `index_transactions_categoryId` | `categoryId` | Non-unique | Category breakdown aggregation |
 
 ---
 
-## 4. Stable Category Identifiers
-Category identifiers are canonical and language-independent:
-- `food`: Groceries / Élelmiszer
-- `dining`: Restaurants & Fast Food / Étkezés & Vendéglátás
-- `transport`: Fuel & Public Transit / Tankolás & Közlekedés
-- `subscriptions`: Subscriptions & Gaming / Előfizetések & Játék
-- `housing`: Utilities & Rent / Rezsi & Szolgáltatás
-- `entertainment`: Leisure & Culture / Szórakozás & Szabadidő
-- `savings`: Transfers & Savings / Utalás & Megtakarítás
-- `income`: Salaries & Income / Fizetés & Bevétel
-- `health`: Healthcare & Pharmacy / Egészség & Gyógyszertár
-- `shopping`: Clothing & Retail / Bevásárlás & Ruházat
-- `other`: Uncategorized / Egyéb
+## 4. Room Type Converters
+
+Defined in `Converters.kt`:
+- **`LocalDate` $\leftrightarrow$ `String`**: ISO-8601 formatted (`YYYY-MM-DD`).
+- **`Instant` $\leftrightarrow$ `Long`**: Epoch milliseconds.
+- **Enums $\leftrightarrow$ `String`**:
+  - `AccountType`: `BANK`, `SAVINGS`, `CASH`, `CARD`, `INVESTMENT`, `LOAN`
+  - `TransactionDirection`: `EXPENSE`, `INCOME`, `TRANSFER`, `REFUND`
+  - `TransactionSource`: `MANUAL`, `NOTIFICATION`, `RECEIPT`, `CSV`, `RECURRING`
+  - `PaymentMethod`: `CASH`, `CARD`, `TRANSFER`, `UNKNOWN`
+  - `NotificationParseStatus`: `PARSED`, `NEEDS_REVIEW`, `IGNORED`, `FAILED`
 
 ---
 
-## 5. Provenance & Auditability
-Every transaction explicitly records its origin:
-- `source`: `'notification' | 'receipt' | 'csv' | 'manual' | 'open_banking' | 'backup'`
-- `sourceAppPackage`: Package ID of the bank application (e.g., `com.revolut.revolut`).
-- `notificationEventId`: Foreign key to `notification_events` record.
-- `receiptId`: Foreign key to `receipt_scans` record.
-- `fingerprint`: Deterministic hash for duplicate detection.
+## 5. Schema Evolution & Migrations
+
+- **Migration 1 $\rightarrow$ 2**: Added the `exchange_rates` table supporting offline multi-currency conversions and historical ECB rates.
+- **Migration 2 $\rightarrow$ 3**: Added `index_transactions_externalId` and the composite index `index_transactions_amountMinor_currency_date` on the `transactions` table to optimize deduplication queries.

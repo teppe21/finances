@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,13 +7,13 @@ plugins {
 }
 
 android {
-    namespace = "com.sajatpenzugyek.app"
-    compileSdk = 34
+    namespace = "com.teppe21.finances"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.sajatpenzugyek.app"
+        applicationId = "com.teppe21.finances"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "2.0.0"
 
@@ -22,10 +24,54 @@ android {
         }
     }
 
+    val keystorePropertiesFile = rootProject.file("local.properties")
+    val keystoreProperties = Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    }
+
+    val releaseKeyFile: String? = System.getenv("FINANCES_KEYSTORE_PATH")
+        ?: keystoreProperties.getProperty("FINANCES_KEYSTORE_PATH")
+        ?: System.getenv("KEYSTORE_PATH")
+        ?: keystoreProperties.getProperty("KEYSTORE_PATH")
+    val releaseKeyPassword: String? = System.getenv("FINANCES_KEYSTORE_PASSWORD")
+        ?: keystoreProperties.getProperty("FINANCES_KEYSTORE_PASSWORD")
+        ?: System.getenv("KEYSTORE_PASSWORD")
+        ?: keystoreProperties.getProperty("KEYSTORE_PASSWORD")
+    val releaseKeyAlias: String? = System.getenv("FINANCES_KEY_ALIAS")
+        ?: keystoreProperties.getProperty("FINANCES_KEY_ALIAS")
+        ?: System.getenv("KEY_ALIAS")
+        ?: keystoreProperties.getProperty("KEY_ALIAS")
+    val releaseKeyEntryPassword: String? = System.getenv("FINANCES_KEY_PASSWORD")
+        ?: keystoreProperties.getProperty("FINANCES_KEY_PASSWORD")
+        ?: System.getenv("KEY_PASSWORD")
+        ?: keystoreProperties.getProperty("KEY_PASSWORD")
+
+    val hasReleaseSigning = !releaseKeyFile.isNullOrBlank() &&
+        file(releaseKeyFile).exists() &&
+        !releaseKeyPassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank() &&
+        !releaseKeyEntryPassword.isNullOrBlank()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeyFile!!)
+                storePassword = releaseKeyPassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyEntryPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -106,8 +152,13 @@ dependencies {
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("androidx.room:room-testing:$roomVersion")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.02.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
