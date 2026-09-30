@@ -3,23 +3,23 @@ package com.teppe21.finances.native.notification
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import com.teppe21.finances.data.local.database.AppDatabase
 import com.teppe21.finances.data.local.entity.NotificationEventEntity
 import com.teppe21.finances.data.repository.CategoryRepository
 import com.teppe21.finances.data.repository.TransactionRepository
 import com.teppe21.finances.domain.model.NotificationParseStatus
 import com.teppe21.finances.domain.model.RawNotification
+import com.teppe21.finances.domain.usecase.DeduplicationStatus
 import com.teppe21.finances.domain.usecase.IngestTransactionUseCase
 import com.teppe21.finances.domain.usecase.IngestionInput
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
-
-import android.util.Log
-import kotlinx.coroutines.cancel
 
 enum class AccountMatchTier {
     HIGH,
@@ -38,12 +38,26 @@ class BankNotificationListenerService : NotificationListenerService() {
 
     private val parsers = listOf(
         RevolutParser(),
+        GoogleWalletParser(),
         OtpParser(),
         ErsteParser(),
         MbhParser(),
         WiseParser(),
         GenericBankParser()
     )
+
+    companion object {
+        private const val TAG = "BankNotifListener"
+
+        private val SECURITY_PATTERNS = listOf(
+            "kód", "kod", "code", "passcode", "jelszó", "biztonsági", "verification",
+            "hitelesít", "jóváhagyás", "egyszer használatos", "one-time", "sms kód"
+        )
+        private val TRANSACTION_INDICATORS = listOf(
+            "fizetés", "vásárlás", "spent", "paid", "with", "elköltöttél",
+            "átutalás", "terhelés", "jóváírás", "received"
+        )
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -57,6 +71,15 @@ class BankNotificationListenerService : NotificationListenerService() {
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
         val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+
+        val fullText = "${title ?: ""} ${text ?: ""} ${bigText ?: ""}".lowercase()
+
+        // Pre-filter: Immediately discard OTP / 2FA verification notifications without payment keywords
+        val hasSecurityToken = SECURITY_PATTERNS.any { fullText.contains(it) }
+        val hasTransactionToken = TRANSACTION_INDICATORS.any { fullText.contains(it) }
+        if (hasSecurityToken && !hasTransactionToken) {
+            return
+        }
 
         val raw = RawNotification(
             packageName = packageName,
@@ -92,18 +115,19 @@ class BankNotificationListenerService : NotificationListenerService() {
         val eventId = UUID.randomUUID().toString()
 
         if (candidate == null) {
+            // Discarded promotion, referral, or non-transaction notification
+            // Never store raw notification title or text in SQLite
             notifDao.insert(
                 NotificationEventEntity(
                     id = eventId,
                     packageName = raw.packageName,
-                    title = raw.title,
-                    text = raw.text,
                     postedAt = raw.postedAt,
                     sourceBank = parser.bankName,
                     processed = true,
                     parseStatus = NotificationParseStatus.IGNORED,
                     transactionId = null,
-                    fingerprint = null
+                    fingerprint = null,
+                    reasonCode = "IGNORED_PROMOTION_OR_NON_TRANSACTION"
                 )
             )
             return
@@ -139,14 +163,13 @@ class BankNotificationListenerService : NotificationListenerService() {
                 NotificationEventEntity(
                     id = eventId,
                     packageName = raw.packageName,
-                    title = raw.title,
-                    text = raw.text,
                     postedAt = raw.postedAt,
                     sourceBank = parser.bankName,
                     processed = false,
                     parseStatus = NotificationParseStatus.NEEDS_REVIEW,
                     transactionId = null,
-                    fingerprint = null
+                    fingerprint = null,
+                    reasonCode = "NEEDS_ACCOUNT_MAPPING"
                 )
             )
             return
@@ -178,25 +201,32 @@ class BankNotificationListenerService : NotificationListenerService() {
 
         val output = ingestUseCase.execute(input)
 
-        // 4. Record event
+        // 4. Record sanitized metadata event without raw title/text
+        val reasonCode = when {
+            output.status == DeduplicationStatus.EXACT_DUPLICATE -> "DUPLICATE_CROSS_SOURCE_PAYMENT"
+            isPending -> "NEEDS_ACCOUNT_REVIEW"
+            output.transaction != null -> "PARSED_SUCCESS"
+            else -> "UNRECOGNIZED_STATUS"
+        }
+
+        val parseStatus = when {
+            output.transaction != null && !isPending -> NotificationParseStatus.PARSED
+            output.status == DeduplicationStatus.EXACT_DUPLICATE -> NotificationParseStatus.IGNORED
+            else -> NotificationParseStatus.NEEDS_REVIEW
+        }
+
         notifDao.insert(
             NotificationEventEntity(
                 id = eventId,
                 packageName = raw.packageName,
-                title = raw.title,
-                text = raw.text,
                 postedAt = raw.postedAt,
                 sourceBank = parser.bankName,
-                processed = output.transaction != null,
-                parseStatus = if (output.transaction != null && !isPending) NotificationParseStatus.PARSED else NotificationParseStatus.NEEDS_REVIEW,
-                transactionId = output.transaction?.id,
-                fingerprint = output.transaction?.fingerprint
+                processed = output.transaction != null || output.status == DeduplicationStatus.EXACT_DUPLICATE,
+                parseStatus = parseStatus,
+                transactionId = output.transaction?.id ?: output.duplicateOfId,
+                fingerprint = output.transaction?.fingerprint,
+                reasonCode = reasonCode
             )
         )
     }
-
-    companion object {
-        private const val TAG = "BankNotifListener"
-    }
 }
-

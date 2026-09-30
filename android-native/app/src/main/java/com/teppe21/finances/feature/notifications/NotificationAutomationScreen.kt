@@ -389,8 +389,13 @@ fun PendingEventCard(
             }
 
             Spacer(modifier = Modifier.height(6.dp))
+            val detailText = when {
+                !event.reasonCode.isNullOrBlank() -> event.reasonCode
+                !event.sourceBank.isNullOrBlank() -> "Source Bank: ${event.sourceBank}"
+                else -> event.packageName
+            }
             Text(
-                text = "${event.title ?: ""} ${event.text ?: ""}",
+                text = detailText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

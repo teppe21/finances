@@ -44,7 +44,7 @@ import androidx.room.migration.Migration
         RecurringRuleEntity::class,
         ExchangeRateEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -89,6 +89,36 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `notification_events_new` (
+                        `id` TEXT NOT NULL,
+                        `packageName` TEXT NOT NULL,
+                        `postedAt` INTEGER NOT NULL,
+                        `sourceBank` TEXT,
+                        `processed` INTEGER NOT NULL,
+                        `parseStatus` TEXT NOT NULL,
+                        `transactionId` TEXT,
+                        `fingerprint` TEXT,
+                        `reasonCode` TEXT,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO `notification_events_new` (`id`, `packageName`, `postedAt`, `sourceBank`, `processed`, `parseStatus`, `transactionId`, `fingerprint`, `reasonCode`)
+                    SELECT `id`, `packageName`, `postedAt`, `sourceBank`, `processed`, `parseStatus`, `transactionId`, `fingerprint`, NULL
+                    FROM `notification_events`
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE `notification_events`")
+                db.execSQL("ALTER TABLE `notification_events_new` RENAME TO `notification_events`")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -96,7 +126,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "finances.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(DatabasePrepopulateCallback())
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
@@ -118,7 +148,7 @@ abstract class AppDatabase : RoomDatabase() {
     }
 }
 
-private suspend fun prepopulateDefaults(db: AppDatabase) {
+suspend fun prepopulateDefaults(db: AppDatabase) {
     val now = Instant.now()
 
     // 1. Prepopulate default accounts (Bank, Revolut, Cash Wallet) with ZERO balance on clean install

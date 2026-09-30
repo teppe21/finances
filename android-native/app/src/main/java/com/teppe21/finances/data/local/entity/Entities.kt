@@ -90,14 +90,13 @@ data class CategoryRuleEntity(
 data class NotificationEventEntity(
     @PrimaryKey val id: String,
     val packageName: String,
-    val title: String?,
-    val text: String?,
     val postedAt: Instant,
     val sourceBank: String?,
     val processed: Boolean,
     val parseStatus: NotificationParseStatus,
     val transactionId: String?,
-    val fingerprint: String?
+    val fingerprint: String?,
+    val reasonCode: String? = null
 )
 
 @Entity(tableName = "receipts")

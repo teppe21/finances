@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finances — Privacy Policy</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --surface-color: #161b22;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-red: #f87171;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 40px 20px 80px 20px;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 24px;
+            margin-bottom: 36px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            margin-top: 36px;
+            margin-bottom: 12px;
+            color: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        p, li {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        ul {
+            padding-left: 20px;
+            margin-bottom: 16px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        .highlight-box {
+            background-color: var(--surface-color);
+            border-left: 4px solid var(--accent-green);
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 24px 0;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Privacy First &bull; 100% On-Device</span>
+            <h1>Privacy Policy</h1>
+            <div class="meta">
+                <strong>Application:</strong> Finances (<code>com.teppe21.finances</code>)<br>
+                <strong>Developer:</strong> teppe21<br>
+                <strong>Effective Date:</strong> September 30, 2026
+            </div>
+        </header>
+
+        <div class="highlight-box">
+            <p>Guaranteed Air-Gap: Finances does not collect, transmit, sell, or share any personal, financial, or behavioral telemetry. All data is processed and stored 100% locally on your Android device.</p>
+        </div>
+
+        <h2>1. Overview and Core Philosophy</h2>
+        <p>
+            Finances is a native Android personal finance manager designed from the ground up to respect your financial privacy. Unlike conventional cloud-based personal financial apps that upload bank statements, transaction histories, and identity credentials to third-party remote servers, Finances operates on a <strong>local-first</strong> architecture.
+        </p>
+
+        <h2>2. Data We Do NOT Collect</h2>
+        <p>We do not collect, process, or transmit any of the following:</p>
+        <ul>
+            <li><strong>No Analytics or Telemetry:</strong> There are no third-party tracking SDKs (no Google Firebase Analytics, no Mixpanel, no Facebook SDK, etc.).</li>
+            <li><strong>No Account Registration:</strong> You do not need to create an account, log in with an email address, or provide phone numbers.</li>
+            <li><strong>No Cloud Synchronisation:</strong> Your transactions, accounts, receipts, and budgets remain exclusively in your phone's local SQLite database.</li>
+            <li><strong>No Advertising:</strong> The application contains no ads and no advertising identifiers.</li>
+        </ul>
+
+        <h2>3. Android Notification Access (NotificationListenerService)</h2>
+        <p>
+            Finances offers an optional feature that allows you to automatically record transactions when your banking apps post payment notifications.
+        </p>
+        <ul>
+            <li><strong>Supported Banks:</strong> Only notifications from explicit, whitelisted banking and payment applications (OTP Bank, Revolut, Google Wallet, Erste Bank, MBH Bank, and Wise) are handled.</li>
+            <li><strong>Zero Raw Text Persistence:</strong> Raw notification titles, notification text, and notification summaries are <strong>never stored</strong> in the database. Only sanitized, structured transaction metadata (such as amount, currency, timestamp, and parsed merchant) is recorded locally.</li>
+            <li><strong>Automatic 2FA / OTP Discard:</strong> Security codes, one-time passwords, login tokens, and verification codes are discarded immediately before processing.</li>
+            <li><strong>Marketing & Referral Filtering:</strong> Non-transactional alerts (such as referral promotions, friend invites, or marketing bonuses) are automatically detected and discarded.</li>
+            <li><strong>Complete User Control:</strong> Notification access requires your explicit permission in Android system settings and can be revoked at any time.</li>
+        </ul>
+
+        <h2>4. Camera and Receipt OCR Processing</h2>
+        <p>
+            The receipt scanning feature uses your device's camera to capture photos of paper receipts:
+        </p>
+        <ul>
+            <li><strong>100% On-Device OCR:</strong> Optical Character Recognition is performed entirely on your device using Google ML Kit On-Device Text Recognition.</li>
+            <li><strong>No Cloud Image Uploads:</strong> Captured receipt images and extracted text snippets never leave your device.</li>
+        </ul>
+
+        <h2>5. Multi-Currency and Foreign Exchange (FX) Rates</h2>
+        <p>
+            Finances includes real-time multi-currency support and currency conversion:
+        </p>
+        <ul>
+            <li><strong>Public Rate Queries:</strong> If enabled, the application queries public European Central Bank reference exchange rates (via the open-source frankfurter.app API). These HTTP GET queries request standard market currency pairs (e.g., EUR/HUF) and transmit <strong>zero personal, account, or financial data</strong>.</li>
+            <li><strong>Air-Gapped Offline Mode:</strong> You can completely disable automatic FX sync in Settings. In offline mode, the app uses cached rates or custom user-defined manual exchange rates without sending a single network byte.</li>
+        </ul>
+
+        <h2>6. Device Security & App Lock</h2>
+        <p>
+            You can secure access to the app using an on-device 4-digit PIN code or Android Biometric authentication (fingerprint / face unlock):
+        </p>
+        <ul>
+            <li><strong>Salted Cryptographic Hashing:</strong> PIN codes are stored using salted SHA-256 hashes generated with a cryptographically random salt. Raw PINs are never stored in plaintext.</li>
+            <li><strong>Biometric Security:</strong> Biometric authentication is handled by the official AndroidX BiometricPrompt API; biometric credentials never leave the Android Secure Hardware Enclave.</li>
+        </ul>
+
+        <h2>7. Data Retention, Export & Complete Deletion</h2>
+        <p>
+            You retain absolute ownership of your data at all times:
+        </p>
+        <ul>
+            <li><strong>Local CSV Export:</strong> You can export your transaction records to a standard CSV file whenever you choose.</li>
+            <li><strong>Complete Data Wipe:</strong> The "Delete All Financial Data" action in Settings permanently wipes all transactions, accounts, rules, receipts, and notification history from SQLite and resets your preferences.</li>
+            <li><strong>App Uninstallation:</strong> Uninstalling the application immediately deletes all local databases, preferences, and cached receipts stored in the application's private sandboxed directory.</li>
+        </ul>
+
+        <h2>8. Contact & Questions</h2>
+        <p>
+            If you have any questions or feedback regarding this Privacy Policy, please open an issue or discussion on GitHub:
+        </p>
+        <p>
+            <a href="https://github.com/teppe21/finances" style="color: var(--accent-blue); text-decoration: none;">https://github.com/teppe21/finances</a>
+        </p>
+
+        <footer>
+            &copy; 2026 Finances &bull; Built with local-first privacy in mind.
+        </footer>
+    </div>
+</body>
+</html>

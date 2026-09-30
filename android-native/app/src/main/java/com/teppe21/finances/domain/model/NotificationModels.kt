@@ -1,4 +1,4 @@
-﻿package com.teppe21.finances.domain.model
+package com.teppe21.finances.domain.model
 
 import java.time.Instant
 import java.time.LocalDate
@@ -20,14 +20,13 @@ data class RawNotification(
 data class NotificationEvent(
     val id: String,
     val packageName: String,
-    val title: String? = null,
-    val text: String? = null,
     val postedAt: Instant = Instant.now(),
     val sourceBank: String? = null,
     val processed: Boolean = false,
     val parseStatus: NotificationParseStatus = NotificationParseStatus.NEEDS_REVIEW,
     val transactionId: String? = null,
-    val fingerprint: String? = null
+    val fingerprint: String? = null,
+    val reasonCode: String? = null
 )
 
 data class ParsedNotificationTransaction(

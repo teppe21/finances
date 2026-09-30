@@ -60,25 +60,56 @@ class IngestTransactionUseCase(
             transactionRepository.findByExternalId(input.externalId)
         } else null
 
+        // Fetch candidate transactions within +/- 2 days with matching amount and currency
+        val possibleCandidates = transactionRepository.findPossibleDuplicates(
+            amountMinor = input.amountMinor,
+            currency = input.currency,
+            minDate = input.date.minusDays(2),
+            maxDate = input.date.plusDays(2)
+        )
+
+        // Cross-source temporal match (Google Wallet + Revolut / card payment within 120 seconds)
+        val crossSourceMatch = possibleCandidates.firstOrNull { existing ->
+            val timeDiffSeconds = kotlin.math.abs(
+                java.time.Duration.between(existing.createdAt, Instant.now()).seconds
+            )
+            val isWithin120s = timeDiffSeconds <= 120
+
+            val isCrossSourcePair = (
+                (input.sourceAppPackage == "com.google.android.apps.walletnfcrel" && existing.sourceAppPackage == "com.revolut.revolut") ||
+                (input.sourceAppPackage == "com.revolut.revolut" && existing.sourceAppPackage == "com.google.android.apps.walletnfcrel") ||
+                (input.sourceAppPackage == "com.google.android.apps.walletnfcrel" && (existing.accountId.contains("revolut", ignoreCase = true) || input.description.contains("revolut", ignoreCase = true))) ||
+                (existing.sourceAppPackage == "com.google.android.apps.walletnfcrel" && (input.accountId.contains("revolut", ignoreCase = true) || existing.description.contains("revolut", ignoreCase = true)))
+            )
+            val sameMerchant = cleanMerchant.isNotBlank() && existing.merchant.equals(cleanMerchant, ignoreCase = true)
+
+            isWithin120s && (isCrossSourcePair || sameMerchant)
+        }
+
         val dedupResult = if (exactByFp != null) {
             DeduplicationResult(DeduplicationStatus.EXACT_DUPLICATE, exactByFp.id, fingerprint)
         } else if (exactByExtId != null) {
             DeduplicationResult(DeduplicationStatus.EXACT_DUPLICATE, exactByExtId.id, fingerprint)
+        } else if (crossSourceMatch != null) {
+            DeduplicationResult(DeduplicationStatus.EXACT_DUPLICATE, crossSourceMatch.id, fingerprint)
         } else {
-            val possibleCandidates = transactionRepository.findPossibleDuplicates(
-                amountMinor = input.amountMinor,
-                currency = input.currency,
-                minDate = input.date.minusDays(2),
-                maxDate = input.date.plusDays(2)
-            )
-            if (possibleCandidates.isNotEmpty()) {
-                DeduplicationResult(DeduplicationStatus.POSSIBLE_DUPLICATE, possibleCandidates.first().id, fingerprint)
+            val fuzzyCandidates = possibleCandidates.filter { existing ->
+                // Distinct merchants must NOT be falsely marked as duplicates
+                val bothMerchantsKnown = !existing.merchant.isNullOrBlank() && cleanMerchant.isNotBlank()
+                val merchantsDiffer = bothMerchantsKnown && !existing.merchant.equals(cleanMerchant, ignoreCase = true)
+                !merchantsDiffer
+            }
+            if (fuzzyCandidates.isNotEmpty()) {
+                DeduplicationResult(DeduplicationStatus.POSSIBLE_DUPLICATE, fuzzyCandidates.first().id, fingerprint)
             } else {
                 DeduplicationResult(DeduplicationStatus.UNIQUE, null, fingerprint)
             }
         }
 
         if (dedupResult.status == DeduplicationStatus.EXACT_DUPLICATE) {
+            if (crossSourceMatch != null && cleanMerchant.isNotBlank() && (crossSourceMatch.merchant.isNullOrBlank() || crossSourceMatch.merchant == "Revolut Partner" || crossSourceMatch.merchant == "Contactless Payment")) {
+                transactionRepository.updateTransaction(crossSourceMatch.copy(merchant = cleanMerchant, updatedAt = Instant.now()))
+            }
             return IngestionOutput(
                 status = DeduplicationStatus.EXACT_DUPLICATE,
                 transaction = null,

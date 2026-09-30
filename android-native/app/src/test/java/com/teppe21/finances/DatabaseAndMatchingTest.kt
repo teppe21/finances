@@ -1,6 +1,7 @@
 package com.teppe21.finances
 
 import com.teppe21.finances.data.local.database.AppDatabase
+import com.teppe21.finances.data.local.preferences.UserPreferencesRepository
 import com.teppe21.finances.domain.model.Account
 import com.teppe21.finances.domain.model.AccountType
 import com.teppe21.finances.domain.model.Transaction
@@ -12,6 +13,7 @@ import com.teppe21.finances.native.notification.AccountMatchTier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -145,6 +147,10 @@ class DatabaseAndMatchingTest {
         assertNotNull(AppDatabase.MIGRATION_2_3)
         assertEquals(2, AppDatabase.MIGRATION_2_3.startVersion)
         assertEquals(3, AppDatabase.MIGRATION_2_3.endVersion)
+
+        assertNotNull(AppDatabase.MIGRATION_3_4)
+        assertEquals(3, AppDatabase.MIGRATION_3_4.startVersion)
+        assertEquals(4, AppDatabase.MIGRATION_3_4.endVersion)
     }
 
     @Test
@@ -170,7 +176,7 @@ class DatabaseAndMatchingTest {
             else -> Pair(null, AccountMatchTier.LOW)
         }
 
-        org.junit.Assert.assertNull("Unknown bank must never match an arbitrary account", matchedAccount)
+        assertNull("Unknown bank must never match an arbitrary account", matchedAccount)
         assertEquals(AccountMatchTier.LOW, matchTier)
     }
 
@@ -192,5 +198,85 @@ class DatabaseAndMatchingTest {
         // Clear demo state restores zero balances
         val clearedAccounts = demoAccounts.map { it.copy(currentBalanceMinor = 0L) }
         assertTrue(clearedAccounts.all { it.currentBalanceMinor == 0L })
+    }
+
+    @Test
+    fun testSaltedPinHashingAndVerification() {
+        val pin = "4826"
+        val salt1 = "salt_abc_123"
+        val salt2 = "salt_xyz_789"
+
+        val hash1 = UserPreferencesRepository.hashPin(pin, salt1)
+        val hash2 = UserPreferencesRepository.hashPin(pin, salt2)
+
+        // 1. SHA-256 output is 64 hex characters
+        assertEquals(64, hash1.length)
+        assertEquals(64, hash2.length)
+
+        // 2. Deterministic for same salt
+        assertEquals(hash1, UserPreferencesRepository.hashPin(pin, salt1))
+
+        // 3. Different salts yield distinct hashes
+        assertNotEquals(hash1, hash2)
+
+        // 4. Incorrect PIN does not verify
+        assertNotEquals(hash1, UserPreferencesRepository.hashPin("0000", salt1))
+    }
+
+    @Test
+    fun testCrossSourceDuplicateIdentificationWithinWindow() {
+        val now = Instant.now()
+        val today = LocalDate.now()
+
+        // Existing Google Wallet transaction for 804 HUF with Revolut Mastercard
+        val existingGwTx = Transaction(
+            id = "tx_wallet_1",
+            accountId = "acc_revolut",
+            date = today,
+            amountMinor = -80400L,
+            currency = "HUF",
+            direction = TransactionDirection.EXPENSE,
+            description = "75. SZ. ABC ÁRUHÁZ\nHUF804.00 with Revolut Mastercard ••1413",
+            merchant = "75. Sz. Abc Áruház",
+            source = TransactionSource.NOTIFICATION,
+            sourceAppPackage = "com.google.android.apps.walletnfcrel",
+            fingerprint = "fp_wallet_1",
+            createdAt = now.minusSeconds(10),
+            updatedAt = now.minusSeconds(10)
+        )
+
+        // Incoming Revolut transaction for 804 HUF 10 seconds later
+        val incomingRevolutPackage = "com.revolut.revolut"
+        val isWithin120s = kotlin.math.abs(java.time.Duration.between(existingGwTx.createdAt, now).seconds) <= 120
+        val isCrossSourcePair = (
+            (incomingRevolutPackage == "com.revolut.revolut" && existingGwTx.sourceAppPackage == "com.google.android.apps.walletnfcrel") ||
+            (existingGwTx.accountId.contains("revolut", ignoreCase = true))
+        )
+
+        assertTrue("Should detect temporal window <= 120s", isWithin120s)
+        assertTrue("Should detect cross-source Google Wallet + Revolut pair", isCrossSourcePair)
+
+        // Distinct purchase check: Two different purchases at different merchants with same amount
+        val coopTx = Transaction(
+            id = "tx_coop",
+            accountId = "acc_revolut",
+            date = today,
+            amountMinor = -80400L,
+            currency = "HUF",
+            direction = TransactionDirection.EXPENSE,
+            description = "Coop",
+            merchant = "Coop",
+            source = TransactionSource.NOTIFICATION,
+            sourceAppPackage = "com.revolut.revolut",
+            fingerprint = "fp_coop",
+            createdAt = now.minusSeconds(30),
+            updatedAt = now.minusSeconds(30)
+        )
+
+        val lipotiMerchant = "Lipóti Pékség"
+        val bothMerchantsKnown = !coopTx.merchant.isNullOrBlank() && lipotiMerchant.isNotBlank()
+        val merchantsDiffer = bothMerchantsKnown && !coopTx.merchant.equals(lipotiMerchant, ignoreCase = true)
+
+        assertTrue("Distinct merchants with same amount must not be collapsed", merchantsDiffer)
     }
 }

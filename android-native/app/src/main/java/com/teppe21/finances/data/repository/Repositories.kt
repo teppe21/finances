@@ -335,27 +335,25 @@ fun CategoryRule.toEntity() = CategoryRuleEntity(
 fun NotificationEventEntity.toDomain() = NotificationEvent(
     id = id,
     packageName = packageName,
-    title = title,
-    text = text,
     postedAt = postedAt,
     sourceBank = sourceBank,
     processed = processed,
     parseStatus = parseStatus,
     transactionId = transactionId,
-    fingerprint = fingerprint
+    fingerprint = fingerprint,
+    reasonCode = reasonCode
 )
 
 fun NotificationEvent.toEntity() = NotificationEventEntity(
     id = id,
     packageName = packageName,
-    title = title,
-    text = text,
     postedAt = postedAt,
     sourceBank = sourceBank,
     processed = processed,
     parseStatus = parseStatus,
     transactionId = transactionId,
-    fingerprint = fingerprint
+    fingerprint = fingerprint,
+    reasonCode = reasonCode
 )
 
 fun ReceiptEntity.toDomain() = ReceiptScan(

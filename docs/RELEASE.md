@@ -113,25 +113,31 @@ Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
 
 ### Repository-Side Readiness (Completed)
 - [x] **Package Name**: `com.teppe21.finances` (clean, non-localized, aligned with GitHub).
-- [x] **Target SDK**: Target SDK 36 (Android 16 API level 36) - meets Google Play requirements.
+- [x] **Target SDK**: Target SDK 36 (Android 16 API level 36) - exceeds current Google Play requirements.
 - [x] **Compile SDK**: Compile SDK 36.
 - [x] **Build Toolchain**: Android Gradle Plugin 8.7.2 + Gradle 8.9 + Kotlin 1.9.22 + Java 17.
 - [x] **R8 & Resource Shrinking**: Fully enabled (`isMinifyEnabled = true`, `isShrinkResources = true`) with verified Proguard rules.
 - [x] **Zero Fake Balances**: Clean installations start with `0` balance accounts.
 - [x] **Demo Data Isolation**: Dedicated "Load Demo" and "Clear Demo" controls in Settings.
 - [x] **Android Auto Backup**: Strict `data_extraction_rules.xml` and `backup_rules.xml` configured.
-- [x] **Prominent Disclosure**: In-app modal explaining notification listener privacy.
+- [x] **Room v4 Zero-Raw-Text Persistence**: Raw notification `title` and `text` are excluded from SQLite storage; only structured metadata is saved.
+- [x] **Google Wallet & Cross-Source Deduplication**: Contactless card payment support with 120s duplicate suppression.
+- [x] **Salted PIN & Biometric Gate**: Hardware-backed biometric authentication and SHA-256 salted PIN lock on launch/resume.
+- [x] **Right to Erasure**: Dedicated "Delete All Financial Data" control in Settings.
+- [x] **Prominent In-App Disclosures**: Modal privacy dialogs prior to requesting Notification and Camera permissions.
 - [x] **Separate CI Workflows**: Code verification workflow (`android.yml`) and isolated release signing workflow (`release.yml`).
+- [x] **Documentation Package**:
+  - `docs/privacy-policy.html` — Static standalone HTML policy
+  - `docs/REAL_DEVICE_TEST_PLAN.md` — 30-day physical device daily-driving checklist
+  - `docs/PLAY_CONSOLE_COMPLIANCE.md` — Data safety and sensitive permissions declaration guide
+  - `docs/PLAY_FINANCIAL_FEATURES_DECLARATION.md` — PFM classification and regulatory scope
 
-### Remaining Manual Google Play Console Steps
-1. **Google Play Developer Account**: Pay the $25 one-time registration fee and complete identity verification.
-2. **Google Play App Signing**: Opt-in to Google Play App Signing (Play Console manages the master distribution key; you upload using the upload key).
-3. **Public Privacy Policy URL**: Host `docs/PRIVACY.md` publicly (e.g. via GitHub Pages at `https://teppe21.github.io/finances/` or on a personal domain) and enter the URL in the App Content section.
-4. **Data Safety Form**:
-   - Financial Data: Collected locally, stored on-device, not shared with third parties.
-   - Photos / Videos: Temporary CameraX receipt processing on-device, not uploaded.
-   - Device Identifiers: None collected.
-5. **Financial Features Declaration**: Declare the app as a **Personal Financial Management (PFM)** tool for tracking personal expenses and budgets. (Confirm the app does not provide banking, lending, investment brokerage, or payment transfers).
+### Google Play Console Manual Launch Steps
+1. **Google Play Developer Account**: Pay the $25 registration fee and complete identity verification.
+2. **Google Play App Signing**: Opt-in to Google Play App Signing (Play Console manages the distribution key; you upload using `finances-upload-key.jks`).
+3. **Public Privacy Policy URL**: Link to `https://teppe21.github.io/finances/privacy-policy.html` in the App Content section.
+4. **Data Safety Form**: Refer to [docs/PLAY_CONSOLE_COMPLIANCE.md](file:///G:/penzugyi-dashboard/docs/PLAY_CONSOLE_COMPLIANCE.md).
+5. **Financial Features Declaration**: Refer to [docs/PLAY_FINANCIAL_FEATURES_DECLARATION.md](file:///G:/penzugyi-dashboard/docs/PLAY_FINANCIAL_FEATURES_DECLARATION.md).
 6. **Store Listing Assets**:
    - App Icon: 512x512 PNG, 32-bit color, max 1MB.
    - Feature Graphic: 1024x500 PNG or JPEG, max 15MB.

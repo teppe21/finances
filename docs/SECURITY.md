@@ -28,30 +28,37 @@ The app stores its structured data in a SQLite database via Android Room (`finan
 
 ---
 
-## 3. Network Communication Transparency
-
-The application requires the standard Android `INTERNET` and `ACCESS_NETWORK_STATE` permissions for exactly **one optional feature**: fetching daily foreign exchange (FX) reference rates.
-
-| Endpoint | Protocol | Payload Sent | Data Received |
-|---|---|---|---|
-| `https://api.frankfurter.app/latest?from=EUR` | HTTPS (TLS 1.3) | None (anonymous HTTP GET) | Public ECB reference exchange rates (EUR, USD, HUF, GBP, CHF) |
-
-### Strict Privacy Guarantee on Network Calls:
-- **No Identifiers**: Requests contain no device IDs, no IP tracking headers, no user tokens, and no account details.
-- **No Financial Data**: The request queries general market rates against 1 EUR; it never transmits local transaction amounts or user currency selections.
-- **Offline & Air-Gap Mode**: If the user disables "Auto-sync Exchange Rates" in Settings, the app operates 100% offline, relying on cached rates in Room SQLite or user-defined manual rates.
-
----
-
-## 4. Bank Notification Listener Security
+## 3. Bank Notification Listener Security & Storage Sanitization (Room v4)
 
 The `BankNotificationListenerService` requires the `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE` system permission.
 
 ### Data Protection Guardrails:
-1. **Targeted Package Filtering**: The service immediately ignores notifications from non-banking packages.
-2. **Immediate 2FA Discard**: Any notification containing security tokens, verification codes, or two-factor authentication markers (e.g. `belépési kód`, `SMS kód`, `biztonsági kód`, `jóváhagyás`, `security code`) is **immediately discarded** and never stored.
-3. **Structured Logcat Hygiene**: Uncaught exceptions or processing errors are captured within safe `try / catch` boundaries. Log statements never print notification text, merchant names, card numbers, or transaction values to `android.util.Log`.
-4. **Prominent In-App Disclosure**: Prior to directing the user to system settings, the app displays a prominent modal disclosure explaining that only supported banking apps are monitored and that all parsing occurs in device RAM.
+1. **Targeted Package Whitelist**: The service immediately ignores notifications from non-whitelisted packages. Unknown third-party apps (e.g. messaging, email, browsers) are rejected at the service entry point.
+2. **Zero Raw Text Persistence (Room v4)**: Raw notification `title`, `text`, `bigText`, and `subText` are **never saved to disk or SQLite**. Only sanitized structured metadata (amount, currency, merchant name, timestamp, reason code) is stored.
+3. **Immediate 2FA Discard**: Any notification containing security tokens, verification codes, or two-factor authentication markers (e.g. `belépési kód`, `SMS kód`, `biztonsági kód`, `jóváhagyás`, `security code`, `verification code`) is **immediately discarded** before processing.
+4. **Promotional Filtering**: Marketing campaigns, referral promotions, and cashback alerts from banking apps (e.g. Revolut referral bonuses) are dropped immediately.
+5. **Cross-Source Deduplication**: When both Google Wallet and Revolut trigger notifications for the same contactless physical payment within 120 seconds, the engine detects the pair and ignores the redundant alert, preventing double expense counting.
+6. **Structured Logcat Hygiene**: Uncaught exceptions or processing errors are captured within safe `try / catch` boundaries. Log statements never print notification text, merchant names, card numbers, or transaction values to `android.util.Log`.
+
+---
+
+## 4. App Lock & Biometrics Architecture
+
+The application provides an interactive application lock barrier:
+
+### 4.1 Salted Cryptographic PIN Storage
+- When a 4-digit PIN is configured, the app generates a cryptographically random salt (`UUID.randomUUID().toString().take(16)`).
+- The PIN is hashed using **SHA-256** combined with the salt: `SHA-256(salt + ":" + pin)`.
+- Only the 64-character hexadecimal digest and salt are stored in Android Jetpack DataStore; the plaintext PIN is never stored in persistent memory.
+
+### 4.2 Biometric Authentication
+- Biometric authentication uses official AndroidX `BiometricPrompt` interfacing with Android's `BiometricManager` (`BIOMETRIC_STRONG | BIOMETRIC_WEAK`).
+- Biometric templates remain locked in the device's hardware Secure Enclave.
+- A PIN code is required as a fallback before biometrics can be activated.
+
+### 4.3 Lock Gate Lifecycle
+- On app launch or when the app is resumed after backgrounding (`onStop`), the `MainActivity` displays a full-screen `LockGateScreen` blocking access to navigation, dashboards, and accounts until authentication succeeds.
+- Disabling the app lock requires entering the active PIN code.
 
 ---
 
@@ -64,8 +71,7 @@ Receipt scanning requires the `android.permission.CAMERA` hardware permission.
 
 ---
 
-## 6. App Lock & Biometrics
+## 6. Complete Data Deletion (Right to Erasure)
 
-The application provides an optional application lock barrier:
-- **Biometrics**: Uses `androidx.biometric:BiometricPrompt`, interfacing directly with the Android BiometricManager and hardware-backed keystore.
-- **PIN Lock**: If a numeric PIN is configured, the app stores a SHA-256 hash combined with an application-level salt in Jetpack DataStore; the plaintext PIN is never stored in persistent memory.
+- A dedicated **"Delete All Financial Data"** control in Settings permanently wipes all SQLite tables (`transactions`, `accounts`, `categories`, `category_rules`, `receipts`, `notification_events`, `budgets`, `recurring_rules`) and resets preferences.
+- Default clean accounts are re-initialized with 0 balance, leaving zero orphaned personal records on the device.

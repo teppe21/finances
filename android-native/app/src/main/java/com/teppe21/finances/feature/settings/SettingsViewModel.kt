@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.time.Instant
 
 class SettingsViewModel : ViewModel() {
 
@@ -24,8 +26,8 @@ class SettingsViewModel : ViewModel() {
 
     val isSyncingRates: StateFlow<Boolean> = fxRepo.isSyncingFlow
     val isRatesOffline: StateFlow<Boolean> = fxRepo.isOfflineFlow
-    val lastRatesSync: StateFlow<java.time.Instant?> = fxRepo.lastSyncFlow
-    val currentRates: StateFlow<Map<String, java.math.BigDecimal>> = fxRepo.ratesFlow
+    val lastRatesSync: StateFlow<Instant?> = fxRepo.lastSyncFlow
+    val currentRates: StateFlow<Map<String, BigDecimal>> = fxRepo.ratesFlow
 
     fun setTheme(theme: String) {
         viewModelScope.launch { prefsRepo.setTheme(theme) }
@@ -48,14 +50,44 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun setManualRate(currency: String, rate: java.math.BigDecimal) {
+    fun setManualRate(currency: String, rate: BigDecimal) {
         viewModelScope.launch {
             fxRepo.setManualRate(currency, rate)
         }
     }
 
     fun setAppLock(type: String, pin: String = "") {
-        viewModelScope.launch { prefsRepo.setAppLock(type, pin) }
+        viewModelScope.launch {
+            if (type == "pin" && pin.isNotBlank()) {
+                prefsRepo.setPinLock(pin)
+            } else if (type == "biometric") {
+                prefsRepo.setBiometricLock()
+            } else {
+                prefsRepo.disableLock()
+            }
+        }
+    }
+
+    fun setPinLock(pin: String) {
+        viewModelScope.launch {
+            prefsRepo.setPinLock(pin)
+        }
+    }
+
+    fun setBiometricLock() {
+        viewModelScope.launch {
+            prefsRepo.setBiometricLock()
+        }
+    }
+
+    fun disableLock() {
+        viewModelScope.launch {
+            prefsRepo.disableLock()
+        }
+    }
+
+    suspend fun verifyPin(inputPin: String): Boolean {
+        return prefsRepo.verifyPin(inputPin)
     }
 
     fun refreshExchangeRates() {
@@ -75,5 +107,13 @@ class SettingsViewModel : ViewModel() {
             com.teppe21.finances.data.local.database.clearSampleData(app.database)
         }
     }
-}
 
+    fun deleteAllData(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            app.database.clearAllTables()
+            prefsRepo.disableLock()
+            com.teppe21.finances.data.local.database.prepopulateDefaults(app.database)
+            onComplete()
+        }
+    }
+}
